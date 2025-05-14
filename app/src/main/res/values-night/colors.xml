@@ -1,0 +1,6 @@
+<resources>
+    <color name="background">#121212</color>
+    <color name="textPrimary">#FFFFFF</color>
+    <color name="iconColor">#FFFFFF</color>
+    <color name="textSecondary">#B3B3B3</color>
+</resources> 

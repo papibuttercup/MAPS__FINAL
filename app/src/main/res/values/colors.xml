@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#000000</color>
+    <color name="gray_900">#222222</color>
+    <color name="gray_800">#333333</color>
+    <color name="gray_700">#444444</color>
+    <color name="gray_600">#555555</color>
+    <color name="gray_500">#666666</color>
+    <color name="gray_400">#777777</color>
+    <color name="gray_300">#888888</color>
+    <color name="gray_200">#AAAAAA</color>
+    <color name="gray_100">#CCCCCC</color>
+    <color name="gray_50">#EEEEEE</color>
+    <color name="white">#FFFFFF</color>
+
+    <!-- Secondary Colors -->
+    <color name="orange">#FF6600</color>
+    <color name="cream">#FFF6E5</color>
+
+    <!-- Theme Assignments -->
+    <color name="colorPrimary">#222222</color>
+    <color name="colorAccent">#FF6600</color>
+    <color name="background">#FFFFFF</color>
+    <color name="dividerColor">#CCCCCC</color>
+    <color name="textPrimary">#222222</color>
+    <color name="textSecondary">#888888</color>
+    <color name="iconColor">#000000</color>
+    <color name="primaryColor">@color/colorPrimary</color>
+</resources>
