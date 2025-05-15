@@ -115,5 +115,12 @@
             android:theme="@style/Theme.MyApplication"/>
 
         <activity android:name=".LandingActivity" />
+
+        <activity android:name=".AccountInfoActivity" />
+        <activity android:name=".EditProfileActivity" />
+
+        <activity
+            android:name=".SellerAccountActivity"
+            android:exported="false" />
     </application>
 </manifest>

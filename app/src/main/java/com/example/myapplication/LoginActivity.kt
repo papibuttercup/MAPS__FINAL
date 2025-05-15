@@ -140,11 +140,9 @@ class LoginActivity : AppCompatActivity() {
                         }
                         "approved" -> {
                             Log.d(TAG, "Seller approved, proceeding to SellerMainActivity")
-                            // Seller account is verified, proceed to SellerMainActivity
-                            val intent = Intent(this, SellerMainActivity::class.java).apply {
-                                putExtra("accountType", "seller")
-                                putExtra("email", email)
-                            }
+                            val intent = Intent(this@LoginActivity, SellerMainActivity::class.java)
+                            intent.putExtra("accountType", "seller")
+                            intent.putExtra("email", email)
                             startActivity(intent)
                             finish()
                         }
@@ -217,16 +215,15 @@ class LoginActivity : AppCompatActivity() {
                     when (accountType) {
                         "moderator" -> {
                             Log.d(TAG, "Redirecting to ModeratorActivity")
-                            val modIntent = Intent(this, ModeratorActivity::class.java)
-                            startActivity(modIntent)
+                            val intent = Intent(this@LoginActivity, ModeratorActivity::class.java)
+                            startActivity(intent)
                             finish()
                         }
                         else -> {
                             Log.d(TAG, "Redirecting to LandingActivity as regular user")
-                            val intent = Intent(this, LandingActivity::class.java).apply {
-                                putExtra("accountType", accountType)
-                                putExtra("email", email)
-                            }
+                            val intent = Intent(this@LoginActivity, LandingActivity::class.java)
+                            intent.putExtra("accountType", accountType)
+                            intent.putExtra("email", email)
                             startActivity(intent)
                             finish()
                         }
@@ -251,14 +248,14 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun handleCreateAccount() {
-        startActivity(Intent(this, SignUpActivity::class.java))
+        startActivity(Intent(this@LoginActivity, SignUpActivity::class.java))
     }
 
     private fun handleForgotPassword() {
-        startActivity(Intent(this, ForgotPasswordActivity::class.java))
+        startActivity(Intent(this@LoginActivity, ForgotPasswordActivity::class.java))
     }
 
     private fun handleSignUp() {
-        startActivity(Intent(this, SignUpActivity::class.java))
+        startActivity(Intent(this@LoginActivity, SignUpActivity::class.java))
     }
 }
