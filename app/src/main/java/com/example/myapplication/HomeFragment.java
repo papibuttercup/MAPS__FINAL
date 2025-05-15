@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
+import com.example.myapplication.ProductListAdapter;
 
 public class HomeFragment extends Fragment {
     private static final String ARG_SELECTED_TAB = "selected_tab";
@@ -126,7 +127,7 @@ public class HomeFragment extends Fragment {
             products.add(new Product(R.drawable.ic_image_placeholder, "T Shirt Cropped Oversized", "R$ 18,90", Arrays.asList(0xFF000000, 0xFF808080)));
             products.add(new Product(R.drawable.ic_image_placeholder, "Winner Sport T-shirt", "R$ 72,90", Arrays.asList(0xFF000000, 0xFF0000FF, 0xFF008000)));
             products.add(new Product(R.drawable.ic_image_placeholder, "Animated Loose T-shirt", "R$ 51,95", Arrays.asList(0xFF000000, 0xFFFF0000)));
-            ProductAdapter adapter = new ProductAdapter(getContext(), products);
+            ProductListAdapter adapter = new ProductListAdapter(getContext(), products);
             recyclerAllProducts.setAdapter(adapter);
         } else {
             if (carousel != null) ((View)carousel.getParent()).setVisibility(View.VISIBLE);

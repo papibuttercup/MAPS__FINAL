@@ -123,5 +123,9 @@
         <activity
             android:name=".SellerAccountActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".ListedItemsActivity1"
+            android:exported="false" />
     </application>
 </manifest>

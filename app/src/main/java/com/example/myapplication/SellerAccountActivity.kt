@@ -1,8 +1,8 @@
 package com.example.myapplication
 
 import android.os.Bundle
-import android.widget.EditText
-import androidx.appcompat.app.AlertDialog
+import android.content.Intent
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.myapplication.databinding.ActivitySellerAccountBinding
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -13,8 +13,6 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import android.content.Intent
-import android.widget.Toast
 
 class SellerAccountActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var binding: ActivitySellerAccountBinding
@@ -31,16 +29,15 @@ class SellerAccountActivity : AppCompatActivity(), OnMapReadyCallback {
         db = FirebaseFirestore.getInstance()
         auth = FirebaseAuth.getInstance()
 
-        // Setup map
-        val mapFragment = SupportMapFragment.newInstance()
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.mapContainer, mapFragment)
-            .commit()
-        mapFragment.getMapAsync(this)
-
+        setupToolbar()
         loadUserData()
-        setupShopNameEdit()
         setupButtons()
+    }
+
+    private fun setupToolbar() {
+        binding.toolbar.setNavigationOnClickListener {
+            onBackPressed()
+        }
     }
 
     private fun loadUserData() {
@@ -49,56 +46,47 @@ class SellerAccountActivity : AppCompatActivity(), OnMapReadyCallback {
             .get()
             .addOnSuccessListener { document ->
                 if (document != null) {
-                    val firstName = document.getString("firstName") ?: ""
-                    val lastName = document.getString("lastName") ?: ""
-                    val fullName = "$firstName $lastName"
+                    // Set shop name
                     val shopName = document.getString("shopName") ?: ""
-                    binding.userNameText.text = fullName
-                    binding.shopNameText.text = shopName
+                    binding.etShopName.setText(shopName)
+
+                    // Set shop description
+                    val shopDescription = document.getString("shopDescription") ?: ""
+                    binding.etShopDescription.setText(shopDescription)
+
+                    // Set current location if available
+                    val latitude = document.getDouble("latitude")
+                    val longitude = document.getDouble("longitude")
+                    if (latitude != null && longitude != null) {
+                        binding.tvCurrentLocation.text = "Location set"
+                    }
+
                     shopDocId = document.id
                 }
             }
     }
 
-    private fun setupShopNameEdit() {
-        val editListener = {
-            val currentShopName = binding.shopNameText.text.toString()
-            val editText = EditText(this)
-            editText.setText(currentShopName)
-            AlertDialog.Builder(this)
-                .setTitle("Edit Shop Name")
-                .setView(editText)
-                .setPositiveButton("Save") { dialog, _ ->
-                    val newShopName = editText.text.toString().trim()
-                    val userId = auth.currentUser?.uid ?: return@setPositiveButton
-                    db.collection("sellers").document(userId)
-                        .update("shopName", newShopName)
-                        .addOnSuccessListener {
-                            binding.shopNameText.text = newShopName
-                            Toast.makeText(this, "Shop name updated", Toast.LENGTH_SHORT).show()
-                        }
-                        .addOnFailureListener {
-                            Toast.makeText(this, "Failed to update shop name", Toast.LENGTH_SHORT).show()
-                        }
-                    dialog.dismiss()
-                }
-                .setNegativeButton("Cancel") { dialog, _ -> dialog.dismiss() }
-                .show()
-        }
-        binding.shopNameText.setOnClickListener { editListener() }
-        binding.editShopNameIcon.setOnClickListener { editListener() }
-    }
-
     private fun setupButtons() {
-        binding.accountDetailsButton.setOnClickListener {
-            // TODO: Navigate to Account Details Activity
-            Toast.makeText(this, "Account Details clicked", Toast.LENGTH_SHORT).show()
+        // Shop Location Button
+        binding.btnIdentifyLocation.setOnClickListener {
+            val intent = Intent(this, Maps::class.java)
+            startActivity(intent)
         }
-        binding.productsButton.setOnClickListener {
-            // TODO: Navigate to Seller's Products Activity
-            Toast.makeText(this, "Products clicked", Toast.LENGTH_SHORT).show()
+
+        // Edit Profile Button
+        binding.btnEditProfile.setOnClickListener {
+            val intent = Intent(this, EditProfileActivity::class.java)
+            startActivity(intent)
         }
-        binding.logoutButton.setOnClickListener {
+
+        // Change Password Button
+        binding.btnChangePassword.setOnClickListener {
+            // TODO: Implement password change functionality
+            Toast.makeText(this, "Password change coming soon", Toast.LENGTH_SHORT).show()
+        }
+
+        // Logout Button
+        binding.btnLogout.setOnClickListener {
             auth.signOut()
             val intent = Intent(this, LoginActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK

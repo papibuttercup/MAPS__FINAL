@@ -6,14 +6,14 @@
     android:padding="8dp">
 
     <ImageView
-        android:id="@+id/imgProduct"
+        android:id="@+id/imageProduct"
         android:layout_width="match_parent"
         android:layout_height="120dp"
         android:scaleType="centerCrop"
         android:background="@drawable/category_card_bg"/>
 
     <TextView
-        android:id="@+id/txtProductName"
+        android:id="@+id/textProductName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Product Name"
@@ -22,11 +22,20 @@
         android:layout_marginTop="4dp"/>
 
     <TextView
-        android:id="@+id/txtProductPrice"
+        android:id="@+id/textProductPrice"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="R$ 00.00"
         android:textColor="@color/colorPrimary"
+        android:textSize="13sp"
+        android:layout_marginTop="2dp"/>
+
+    <TextView
+        android:id="@+id/textProductStock"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Stock: 0"
+        android:textColor="@android:color/darker_gray"
         android:textSize="13sp"
         android:layout_marginTop="2dp"/>
 

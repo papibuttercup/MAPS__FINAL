@@ -12,11 +12,11 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
 
-public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ViewHolder> {
+public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.ViewHolder> {
     private List<Product> products;
     private Context context;
 
-    public ProductAdapter(Context context, List<Product> products) {
+    public ProductListAdapter(Context context, List<Product> products) {
         this.context = context;
         this.products = products;
     }

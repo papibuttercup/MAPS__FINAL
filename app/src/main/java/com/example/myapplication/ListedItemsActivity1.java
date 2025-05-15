@@ -1,1 +1,12 @@
-import com.example.myapplication.Product; 
+package com.example.myapplication;
+
+import android.os.Bundle;
+import androidx.appcompat.app.AppCompatActivity;
+
+public class ListedItemsActivity1 extends AppCompatActivity {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_listed_items);
+    }
+} 
