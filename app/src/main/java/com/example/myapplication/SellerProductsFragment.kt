@@ -17,6 +17,20 @@ class SellerProductsFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentSellerProductsBinding.inflate(inflater, container, false)
+
+        binding.btnListItem.setOnClickListener {
+            // Navigate to ListNewItemActivity
+            startActivity(android.content.Intent(requireContext(), ListNewItemActivity::class.java))
+        }
+        binding.btnIdentifyLocation.setOnClickListener {
+            // Navigate to Maps Activity (for shop location)
+            startActivity(android.content.Intent(requireContext(), Maps::class.java))
+        }
+        binding.btnOrders.setOnClickListener {
+            // Navigate to ListedItemsActivity (for orders)
+            startActivity(android.content.Intent(requireContext(), ListedItemsActivity::class.java))
+        }
+
         return binding.root
     }
 

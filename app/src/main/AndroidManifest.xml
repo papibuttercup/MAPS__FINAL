@@ -72,6 +72,7 @@
         <activity 
             android:name=".SellerMainActivity" 
             android:exported="false"
+            android:label="Seller Dashboard"
             android:theme="@style/Theme.MyApplication"/>
             
         <activity 

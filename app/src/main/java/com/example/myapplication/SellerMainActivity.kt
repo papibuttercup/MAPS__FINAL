@@ -19,7 +19,6 @@ class SellerMainActivity : AppCompatActivity() {
 
         setupViewPager()
         setupBottomNavigation()
-        setupFloatingActionButton()
     }
 
     private fun setupViewPager() {
@@ -48,13 +47,6 @@ class SellerMainActivity : AppCompatActivity() {
                 }
                 else -> false
             }
-        }
-    }
-
-    private fun setupFloatingActionButton() {
-        binding.fab.setOnClickListener {
-            // Handle FAB click - Add new item
-            // You can show a dialog or navigate to add item screen
         }
     }
 

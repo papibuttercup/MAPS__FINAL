@@ -14,4 +14,38 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp">
+
+        <Button
+            android:id="@+id/btnListItem"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="List an Item"
+            android:drawableLeft="@drawable/ic_add_box"
+            android:background="@drawable/rounded_button_outline"
+            android:layout_marginBottom="16dp" />
+
+        <Button
+            android:id="@+id/btnIdentifyLocation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Identify Shop Location"
+            android:drawableLeft="@drawable/ic_location_on"
+            android:background="@drawable/rounded_button_outline"
+            android:layout_marginBottom="16dp" />
+
+        <Button
+            android:id="@+id/btnOrders"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Orders"
+            android:drawableLeft="@drawable/ic_orders"
+            android:background="@drawable/rounded_button_outline" />
+    </LinearLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout> 

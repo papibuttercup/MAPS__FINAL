@@ -3,4 +3,90 @@
     <string name="app_name">My Application</string>
     <string name="Thriffty">Thriffty</string>
     <string name="maptiler_api_key">YOUR_MAPTILER_API_KEY_HERE</string>
+    <string-array name="categories">
+        <item>Clothing</item>
+        <item>Electronics</item>
+        <item>Home &amp; Living</item>
+    </string-array>
+    <string-array name="subcategories_clothing">
+        <item>Men</item>
+        <item>Women</item>
+        <item>Kids</item>
+    </string-array>
+    <string-array name="subcategories_electronics">
+        <item>Phones</item>
+        <item>Computers</item>
+        <item>Accessories</item>
+    </string-array>
+    <string-array name="subcategories_home_living">
+        <item>Furniture</item>
+        <item>Decor</item>
+        <item>Kitchen</item>
+    </string-array>
+    <string-array name="classifications_men">
+        <item>Shirts</item>
+        <item>Pants</item>
+        <item>Jackets</item>
+    </string-array>
+    <string-array name="classifications_women">
+        <item>Dresses</item>
+        <item>Blouses</item>
+        <item>Skirts</item>
+    </string-array>
+    <string-array name="classifications_kids">
+        <item>Toys</item>
+        <item>Clothes</item>
+        <item>Books</item>
+    </string-array>
+    <string-array name="main_categories">
+        <item>Women</item>
+        <item>Men</item>
+        <item>Kids</item>
+    </string-array>
+    <string-array name="categories_women">
+        <item>Dress</item>
+        <item>Tops</item>
+        <item>T-Shirts</item>
+        <item>Shirts</item>
+        <item>Beach wear</item>
+        <item>Pants</item>
+        <item>Jeans</item>
+        <item>Shorts</item>
+        <item>Skirts</item>
+        <item>Outerwear</item>
+        <item>Jackets</item>
+        <item>Suits</item>
+        <item>Sweaters</item>
+        <item>Hoodies</item>
+        <item>Activewear</item>
+        <item>Sleepwear</item>
+        <item>Underwear</item>
+    </string-array>
+    <string-array name="categories_men">
+        <item>Shirts</item>
+        <item>T-Shirts</item>
+        <item>Pants</item>
+        <item>Jeans</item>
+        <item>Shorts</item>
+        <item>Jackets</item>
+        <item>Suits</item>
+        <item>Sweaters</item>
+        <item>Hoodies</item>
+        <item>Activewear</item>
+        <item>Underwear</item>
+        <item>Sleepwear</item>
+    </string-array>
+    <string-array name="categories_kids">
+        <item>T-Shirts</item>
+        <item>Shirts</item>
+        <item>Dresses</item>
+        <item>Pants</item>
+        <item>Shorts</item>
+        <item>Skirts</item>
+        <item>Jackets</item>
+        <item>Sweaters</item>
+        <item>Hoodies</item>
+        <item>Sleepwear</item>
+        <item>Underwear</item>
+    </string-array>
 </resources>
