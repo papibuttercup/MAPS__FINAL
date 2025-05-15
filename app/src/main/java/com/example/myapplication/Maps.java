@@ -89,6 +89,8 @@ import android.widget.ImageButton;
 
 import java.util.concurrent.TimeUnit;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+
 public class Maps extends AppCompatActivity implements OnMapReadyCallback {
     private static final int PERMISSIONS_REQUEST_LOCATION = 99;
     private static final String MARKERS_PREF = "saved_markers";
@@ -114,6 +116,7 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
     private FirebaseAuth auth;
 
     private BottomSheetDialog collapsedSheetDialog;
+    private BottomNavigationView bottomNavigation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -131,6 +134,12 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
         searchInput = findViewById(R.id.searchInput);
         gpsFab = findViewById(R.id.gpsFab);
         searchIcon = findViewById(R.id.searchIcon);
+        bottomNavigation = findViewById(R.id.bottomNavigation);
+
+        Log.d("Maps", "Bottom Navigation initialized: " + (bottomNavigation != null));
+        if (bottomNavigation == null) {
+            Log.e("Maps", "Bottom Navigation is null after findViewById");
+        }
 
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
@@ -138,6 +147,9 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
         gpsFab.setOnClickListener(v -> toggleGpsTracking());
         menuIcon.setOnClickListener(this::showMenuDropdown);
         searchIcon.setOnClickListener(v -> performSearch());
+
+        setupBottomNavigation();
+
         httpClient = new OkHttpClient.Builder()
                 .connectTimeout(10, TimeUnit.SECONDS)
                 .readTimeout(10, TimeUnit.SECONDS)
@@ -168,6 +180,7 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
             }
         });
     }
+
     private void checkSellerVerification() {
         FirebaseUser currentUser = auth.getCurrentUser();
         if (currentUser == null) {
@@ -847,5 +860,46 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
                 loadAllSellerMarkers();
             });
         });
+    }
+
+    private void setupBottomNavigation() {
+        Log.d("Maps", "Setting up bottom navigation");
+        if (bottomNavigation != null) {
+            Log.d("Maps", "Bottom Navigation is not null, proceeding with setup");
+            bottomNavigation.setSelectedItemId(R.id.navigation_for_you);
+            bottomNavigation.setVisibility(View.VISIBLE);
+            bottomNavigation.setOnNavigationItemSelectedListener(item -> {
+                int itemId = item.getItemId();
+                Log.d("Maps", "Navigation item selected: " + itemId);
+                if (itemId == R.id.navigation_for_you) {
+                    return true;
+                } else if (itemId == R.id.navigation_location) {
+                    if (checkLocationPermission()) {
+                        zoomToUserLocation();
+                    }
+                    return true;
+                } else if (itemId == R.id.navigation_account) {
+                    startActivity(new Intent(Maps.this, AccountActivity.class));
+                    return true;
+                }
+                return false;
+            });
+        } else {
+            Log.e("Maps", "Bottom Navigation is null in setupBottomNavigation");
+        }
+    }
+
+    private void zoomToUserLocation() {
+        if (locationComponent != null && locationComponent.isLocationComponentEnabled()) {
+            Location lastKnownLocation = locationComponent.getLastKnownLocation();
+            if (lastKnownLocation != null) {
+                maplibreMap.animateCamera(
+                    CameraUpdateFactory.newLatLngZoom(
+                        new LatLng(lastKnownLocation.getLatitude(), lastKnownLocation.getLongitude()),
+                        15.0
+                    )
+                );
+            }
+        }
     }
 }

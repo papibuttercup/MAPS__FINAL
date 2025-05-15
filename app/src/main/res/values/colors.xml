@@ -11,7 +11,7 @@
     <color name="gray_200">#AAAAAA</color>
     <color name="gray_100">#CCCCCC</color>
     <color name="gray_50">#EEEEEE</color>
-    <color name="white">#FFFFFF</color>
+    <color name="white">#FFFFFFFF</color>
 
     <!-- Secondary Colors -->
     <color name="orange">#FF6600</color>
@@ -19,11 +19,11 @@
 
     <!-- Theme Assignments -->
     <color name="colorPrimary">#222222</color>
-    <color name="colorAccent">#FF6600</color>
+    <color name="colorAccent">#FF6200EE</color>
     <color name="background">#FFFFFF</color>
     <color name="dividerColor">#CCCCCC</color>
     <color name="textPrimary">#222222</color>
-    <color name="textSecondary">#888888</color>
-    <color name="iconColor">#000000</color>
-    <color name="primaryColor">@color/colorPrimary</color>
+    <color name="textSecondary">#757575</color>
+    <color name="iconColor">#FF6200EE</color>
+    <color name="primaryColor">#FF6200EE</color>
 </resources>

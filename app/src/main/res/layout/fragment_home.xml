@@ -172,37 +172,6 @@
                 android:src="@drawable/ic_banner_placeholder"
                 android:background="@color/background" />
 
-            <!-- Parcels Arriving Today -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp"
-                android:background="@color/cream">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Parcels Arriving Today"
-                    android:textStyle="bold"
-                    android:textColor="@color/orange"
-                    android:textSize="16sp" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="3"
-                    android:textStyle="bold"
-                    android:textColor="@color/orange"
-                    android:textSize="28sp"
-                    android:layout_marginTop="4dp" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="2 Delivered | 1 Arriving"
-                    android:textColor="@color/textSecondary"
-                    android:textSize="14sp"
-                    android:layout_marginTop="2dp" />
-            </LinearLayout>
-
             <!-- Category Section -->
             <LinearLayout
                 android:id="@+id/categorySection"
