@@ -66,9 +66,13 @@ public class HomeFragment extends Fragment {
         // See all categories
         TextView seeAllCategories = view.findViewById(R.id.seeAllCategories);
         seeAllCategories.setOnClickListener(v -> {
+            CategoriesFragment fragment = new CategoriesFragment();
+            Bundle args = new Bundle();
+            args.putString("selectedTab", selectedTab);
+            fragment.setArguments(args);
             requireActivity().getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.fragment_container, new CategoriesFragment())
+                .replace(R.id.fragment_container, fragment)
                 .addToBackStack(null)
                 .commit();
         });
@@ -135,49 +139,18 @@ public class HomeFragment extends Fragment {
             if (categorySection != null) categorySection.setVisibility(View.VISIBLE);
             if (homeContentSection != null) homeContentSection.setVisibility(View.VISIBLE);
             carousel.removeAllViews();
+            
+            String[] categories;
             if (tab.equals("Men")) {
-                addCategoryCard(carousel, "Shirts");
-                addCategoryCard(carousel, "T-Shirts");
-                addCategoryCard(carousel, "Pants");
-                addCategoryCard(carousel, "Jeans");
-                addCategoryCard(carousel, "Shorts");
-                addCategoryCard(carousel, "Jackets");
-                addCategoryCard(carousel, "Suits");
-                addCategoryCard(carousel, "Sweaters");
-                addCategoryCard(carousel, "Hoodies");
-                addCategoryCard(carousel, "Activewear");
-                addCategoryCard(carousel, "Underwear");
-                addCategoryCard(carousel, "Sleepwear");
+                categories = getResources().getStringArray(R.array.categories_men);
             } else if (tab.equals("Kids")) {
-                addCategoryCard(carousel, "T-Shirts");
-                addCategoryCard(carousel, "Shirts");
-                addCategoryCard(carousel, "Dresses");
-                addCategoryCard(carousel, "Pants");
-                addCategoryCard(carousel, "Shorts");
-                addCategoryCard(carousel, "Skirts");
-                addCategoryCard(carousel, "Jackets");
-                addCategoryCard(carousel, "Sweaters");
-                addCategoryCard(carousel, "Hoodies");
-                addCategoryCard(carousel, "Sleepwear");
-                addCategoryCard(carousel, "Underwear");
+                categories = getResources().getStringArray(R.array.categories_kids);
             } else { // Women (default)
-                addCategoryCard(carousel, "Dress");
-                addCategoryCard(carousel, "Tops");
-                addCategoryCard(carousel, "T-Shirts");
-                addCategoryCard(carousel, "Shirts");
-                addCategoryCard(carousel, "Beach wear");
-                addCategoryCard(carousel, "Pants");
-                addCategoryCard(carousel, "Jeans");
-                addCategoryCard(carousel, "Shorts");
-                addCategoryCard(carousel, "Skirts");
-                addCategoryCard(carousel, "Outerwear");
-                addCategoryCard(carousel, "Jackets");
-                addCategoryCard(carousel, "Suits");
-                addCategoryCard(carousel, "Sweaters");
-                addCategoryCard(carousel, "Hoodies");
-                addCategoryCard(carousel, "Activewear");
-                addCategoryCard(carousel, "Sleepwear");
-                addCategoryCard(carousel, "Underwear");
+                categories = getResources().getStringArray(R.array.categories_women);
+            }
+            
+            for (String category : categories) {
+                addCategoryCard(carousel, category);
             }
         }
     }

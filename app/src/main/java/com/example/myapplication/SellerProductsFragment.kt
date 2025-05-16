@@ -46,10 +46,6 @@ class SellerProductsFragment : Fragment() {
         binding.btnListItem.setOnClickListener {
             startActivity(Intent(requireContext(), ListNewItemActivity::class.java))
         }
-
-        binding.fabAddProduct.setOnClickListener {
-            startActivity(Intent(requireContext(), ListNewItemActivity::class.java))
-        }
     }
 
     private fun loadProducts() {

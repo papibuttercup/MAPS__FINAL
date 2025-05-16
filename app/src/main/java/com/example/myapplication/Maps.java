@@ -90,6 +90,8 @@ import android.widget.ImageButton;
 import java.util.concurrent.TimeUnit;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import androidx.cardview.widget.CardView;
+import android.widget.EditText;
 
 public class Maps extends AppCompatActivity implements OnMapReadyCallback {
     private static final int PERMISSIONS_REQUEST_LOCATION = 99;
@@ -106,7 +108,7 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
     private boolean isSearchExpanded = true;
 
     private LocationComponent locationComponent;
-    private FloatingActionButton gpsFab;
+    private FloatingActionButton setLocationFab;
     private boolean isTracking = false;
     private LatLng lastKnownLocation;
     private View menuIcon;
@@ -117,6 +119,11 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
 
     private BottomSheetDialog collapsedSheetDialog;
     private BottomNavigationView bottomNavigation;
+
+    private FloatingActionButton searchFab;
+    private FloatingActionButton addMarkerFab;
+    private CardView searchCard;
+    private ImageView closeSearch;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -130,11 +137,13 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
         setContentView(rootView);
 
         mapView = findViewById(R.id.mapView);
-        menuIcon = findViewById(R.id.menuIcon);
         searchInput = findViewById(R.id.searchInput);
-        gpsFab = findViewById(R.id.gpsFab);
         searchIcon = findViewById(R.id.searchIcon);
         bottomNavigation = findViewById(R.id.bottomNavigation);
+        searchFab = findViewById(R.id.searchFab);
+        addMarkerFab = findViewById(R.id.addMarkerFab);
+        searchCard = findViewById(R.id.searchCard);
+        closeSearch = findViewById(R.id.closeSearch);
 
         Log.d("Maps", "Bottom Navigation initialized: " + (bottomNavigation != null));
         if (bottomNavigation == null) {
@@ -144,9 +153,37 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
 
-        gpsFab.setOnClickListener(v -> toggleGpsTracking());
-        menuIcon.setOnClickListener(this::showMenuDropdown);
-        searchIcon.setOnClickListener(v -> performSearch());
+        final LatLng[] selectedLatLng = {null};
+        searchIcon.setOnClickListener(v -> searchCard.setVisibility(View.VISIBLE));
+        searchFab.setOnClickListener(v -> searchCard.setVisibility(View.VISIBLE));
+        closeSearch.setOnClickListener(v -> searchCard.setVisibility(View.GONE));
+        addMarkerFab.setOnClickListener(v -> {
+            if (maplibreMap != null) {
+                Toast.makeText(this, "Tap on the map to set your shop location", Toast.LENGTH_SHORT).show();
+                MapLibreMap.OnMapClickListener[] tempListener = new MapLibreMap.OnMapClickListener[1];
+                tempListener[0] = point -> {
+                    // Prompt for shop name
+                    View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_edit_marker_name, null);
+                    EditText nameInput = dialogView.findViewById(R.id.markerNameInput);
+                    new AlertDialog.Builder(Maps.this)
+                        .setTitle("Set Shop Name")
+                        .setView(dialogView)
+                        .setPositiveButton("Save", (dialog, which) -> {
+                            String shopName = nameInput.getText().toString().trim();
+                            if (!shopName.isEmpty()) {
+                                addMarker(point.getLatitude(), point.getLongitude(), shopName);
+                            } else {
+                                Toast.makeText(this, "Shop name cannot be empty", Toast.LENGTH_SHORT).show();
+                            }
+                        })
+                        .setNegativeButton("Cancel", null)
+                        .show();
+                    maplibreMap.removeOnMapClickListener(tempListener[0]);
+                    return true;
+                };
+                maplibreMap.addOnMapClickListener(tempListener[0]);
+            }
+        });
 
         setupBottomNavigation();
 
@@ -179,6 +216,8 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
                 return false;
             }
         });
+
+        searchCard.setVisibility(View.GONE);
     }
 
     private void checkSellerVerification() {
@@ -206,65 +245,6 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
                     Log.e("Maps", "Error checking verification status", e);
                     isVerifiedSeller = false;
                 });
-    }
-
-    private void showMenuDropdown(View anchor) {
-        View popupView = LayoutInflater.from(this).inflate(R.layout.custom_dropdown_menu, null);
-
-        PopupWindow popupWindow = new PopupWindow(popupView,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                true);
-
-        int[] anchorLocation = new int[2];
-        anchor.getLocationOnScreen(anchorLocation);
-
-        DisplayMetrics displayMetrics = new DisplayMetrics();
-        getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
-        int screenHeight = displayMetrics.heightPixels;
-
-        popupView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-        int popupWidth = popupView.getMeasuredWidth();
-        int popupHeight = popupView.getMeasuredHeight();
-
-        int xPos = anchorLocation[0];
-
-        int yPos = anchorLocation[1] + anchor.getHeight() + 32;
-
-        if (yPos + popupHeight > screenHeight) {
-            yPos = anchorLocation[1] - popupHeight - 10;
-        }
-
-        popupWindow.showAtLocation(anchor, Gravity.NO_GRAVITY, xPos, yPos);
-
-        popupView.findViewById(R.id.menu_account).setOnClickListener(v -> {
-            Intent intent = new Intent(this, AccountInfoActivity.class);
-            startActivity(intent);
-            popupWindow.dismiss();
-        });
-
-        popupView.findViewById(R.id.menu_categories).setOnClickListener(v -> {
-            Intent intent = new Intent(this, CategoriesActivity.class);
-            startActivity(intent);
-            popupWindow.dismiss();
-        });
-
-        popupView.findViewById(R.id.menu_settings).setOnClickListener(v -> {
-            Intent intent = new Intent(this, SettingsActivity.class);
-            startActivity(intent);
-            popupWindow.dismiss();
-        });
-
-        popupView.findViewById(R.id.menu_help).setOnClickListener(v -> {
-            Toast.makeText(this, "Help clicked", Toast.LENGTH_SHORT).show();
-            popupWindow.dismiss();
-        });
-
-        popupView.findViewById(R.id.menu_seller).setOnClickListener(v -> {
-            Intent intent = new Intent(this, CreateSellerAccountActivity.class);
-            startActivity(intent);
-            popupWindow.dismiss();
-        });
     }
 
     private void performSearch() {
@@ -376,8 +356,9 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
             enableLocationComponent(style);
         }
 
-        loadAllSellerMarkers();
+        // loadAllSellerMarkers();
 
+        // Remove map tap-to-add-marker logic
         maplibreMap.setOnMarkerClickListener(marker -> {
             String shopName = marker.getTitle();
             String locationName = "Sample Location";
@@ -454,44 +435,37 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
         }
     }
 
-    private void toggleGpsTracking() {
-        if (locationComponent == null || !locationComponent.isLocationComponentEnabled()) {
-            if (checkLocationPermission() && maplibreMap != null) {
-                maplibreMap.getStyle(this::enableLocationComponent);
-            }
-            return;
-        }
-
-        isTracking = !isTracking;
-
-        if (isTracking) {
-            locationComponent.setCameraMode(CameraMode.TRACKING);
-            locationComponent.setRenderMode(RenderMode.COMPASS);
-            gpsFab.setImageResource(R.drawable.ic_gps_fixed);
-            showToast("GPS Tracking Enabled");
-
-        } else {
-            locationComponent.setCameraMode(CameraMode.NONE);
-            locationComponent.setRenderMode(RenderMode.NORMAL);
-            gpsFab.setImageResource(R.drawable.ic_gps_not_fixed);
-            showToast("GPS Tracking Disabled");
-        }
-    }
-
     private void addMarker(double lat, double lng, String title) {
         if (!isVerifiedSeller) {
             showToast("Only verified sellers can add markers");
             return;
-
         }
-
         LatLng position = new LatLng(lat, lng);
         maplibreMap.addMarker(new MarkerOptions()
                 .position(position)
                 .title(title));
-
+        saveMarkerToFirestore(lat, lng, title);
         maplibreMap.animateCamera(CameraUpdateFactory.newLatLngZoom(position, 15));
         showToast("Marker added: " + title);
+    }
+
+    private void saveMarkerToFirestore(double lat, double lng, String title) {
+        FirebaseUser currentUser = auth.getCurrentUser();
+        if (currentUser == null) {
+            showToast("Please sign in to add markers");
+            return;
+        }
+        String userId = currentUser.getUid();
+        Map<String, Object> markerData = new HashMap<>();
+        markerData.put("latitude", lat);
+        markerData.put("longitude", lng);
+        markerData.put("title", title);
+        markerData.put("sellerId", userId);
+        markerData.put("timestamp", com.google.firebase.firestore.FieldValue.serverTimestamp());
+        db.collection("seller_markers")
+            .add(markerData)
+            .addOnSuccessListener(documentReference -> showToast("Location saved"))
+            .addOnFailureListener(e -> showToast("Error saving location: " + e.getMessage()));
     }
 
     private void showToast(String message) {

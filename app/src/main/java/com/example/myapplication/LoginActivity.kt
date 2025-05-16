@@ -219,6 +219,14 @@ class LoginActivity : AppCompatActivity() {
                             startActivity(intent)
                             finish()
                         }
+                        "seller" -> {
+                            Log.d(TAG, "Redirecting to SellerMainActivity")
+                            val intent = Intent(this@LoginActivity, SellerMainActivity::class.java)
+                            intent.putExtra("accountType", "seller")
+                            intent.putExtra("email", email)
+                            startActivity(intent)
+                            finish()
+                        }
                         else -> {
                             Log.d(TAG, "Redirecting to LandingActivity as regular user")
                             val intent = Intent(this@LoginActivity, LandingActivity::class.java)
