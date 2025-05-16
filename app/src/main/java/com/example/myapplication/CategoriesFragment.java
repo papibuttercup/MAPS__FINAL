@@ -17,10 +17,8 @@ public class CategoriesFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_categories, container, false);
         
         // Get selectedTab argument
-        String selectedTab = "Women";
-        if (getArguments() != null) {
-            selectedTab = getArguments().getString("selectedTab", "Women");
-        }
+        final String selectedTab = getArguments() != null ? 
+            getArguments().getString("selectedTab", "Women") : "Women";
 
         // Find the LinearLayout for categories
         LinearLayout categoryList = view.findViewById(R.id.categoryList);
@@ -38,7 +36,19 @@ public class CategoriesFragment extends Fragment {
             View card = inflater.inflate(R.layout.item_category_card, categoryList, false);
             TextView label = card.findViewById(R.id.categoryLabel);
             label.setText(category);
-            // Optionally set image or click listeners here
+            // Set click listener to open CategoryProductsFragment
+            card.setOnClickListener(v -> {
+                CategoryProductsFragment fragment = new CategoryProductsFragment();
+                Bundle args = new Bundle();
+                args.putString("mainCategory", selectedTab);
+                args.putString("category", category);
+                fragment.setArguments(args);
+                requireActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragment_container, fragment)
+                    .addToBackStack(null)
+                    .commit();
+            });
             categoryList.addView(card);
         }
         

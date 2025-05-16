@@ -2,6 +2,7 @@ package com.example.myapplication;
 
 import android.content.Context;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -31,21 +32,21 @@ public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Product product = products.get(position);
-        holder.imgProduct.setImageResource(product.imageResId);
-        holder.txtProductName.setText(product.name);
-        holder.txtProductPrice.setText(product.price);
-        holder.colorDots.removeAllViews();
-        for (int color : product.colorList) {
-            View dot = new View(context);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(24, 24);
-            params.setMarginEnd(8);
-            dot.setLayoutParams(params);
-            GradientDrawable drawable = new GradientDrawable();
-            drawable.setShape(GradientDrawable.OVAL);
-            drawable.setColor(color);
-            dot.setBackground(drawable);
-            holder.colorDots.addView(dot);
+        // Set product image
+        String imageUri = null;
+        if (product.coverPhotoUri != null && !product.coverPhotoUri.isEmpty()) {
+            imageUri = product.coverPhotoUri;
+        } else if (product.productImageUris != null && !product.productImageUris.isEmpty()) {
+            imageUri = product.productImageUris.get(0);
         }
+        if (imageUri != null && !imageUri.isEmpty()) {
+            holder.imgProduct.setImageURI(Uri.parse(imageUri));
+        } else {
+            holder.imgProduct.setImageResource(R.drawable.ic_image_placeholder);
+        }
+        holder.txtProductName.setText(product.name);
+        holder.txtProductPrice.setText("₱" + product.price);
+        holder.colorDots.removeAllViews(); // No color dots in new model
     }
 
     @Override

@@ -17,10 +17,15 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 import com.example.myapplication.ProductListAdapter;
+import android.widget.Toast;
 
 public class HomeFragment extends Fragment {
     private static final String ARG_SELECTED_TAB = "selected_tab";
-    private String selectedTab = "Women";
+    private final String selectedTab;
+
+    public HomeFragment() {
+        this.selectedTab = "Women";
+    }
 
     public static HomeFragment newInstance(String selectedTab) {
         HomeFragment fragment = new HomeFragment();
@@ -35,9 +40,8 @@ public class HomeFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_home, container, false);
 
-        if (getArguments() != null) {
-            selectedTab = getArguments().getString(ARG_SELECTED_TAB, "Women");
-        }
+        final String currentTab = getArguments() != null ? 
+            getArguments().getString(ARG_SELECTED_TAB, selectedTab) : selectedTab;
 
         // Tab buttons
         Button btnAll = view.findViewById(R.id.btnAll);
@@ -52,10 +56,10 @@ public class HomeFragment extends Fragment {
         View underlineKids = view.findViewById(R.id.underlineKids);
 
         // Highlight selected tab
-        underlineAll.setVisibility(selectedTab.equals("All") ? View.VISIBLE : View.GONE);
-        underlineWomen.setVisibility(selectedTab.equals("Women") ? View.VISIBLE : View.GONE);
-        underlineMen.setVisibility(selectedTab.equals("Men") ? View.VISIBLE : View.GONE);
-        underlineKids.setVisibility(selectedTab.equals("Kids") ? View.VISIBLE : View.GONE);
+        underlineAll.setVisibility(currentTab.equals("All") ? View.VISIBLE : View.GONE);
+        underlineWomen.setVisibility(currentTab.equals("Women") ? View.VISIBLE : View.GONE);
+        underlineMen.setVisibility(currentTab.equals("Men") ? View.VISIBLE : View.GONE);
+        underlineKids.setVisibility(currentTab.equals("Kids") ? View.VISIBLE : View.GONE);
 
         // Set up tab click listeners
         btnAll.setOnClickListener(v -> reloadWithTab("All"));
@@ -68,7 +72,7 @@ public class HomeFragment extends Fragment {
         seeAllCategories.setOnClickListener(v -> {
             CategoriesFragment fragment = new CategoriesFragment();
             Bundle args = new Bundle();
-            args.putString("selectedTab", selectedTab);
+            args.putString("selectedTab", currentTab);
             fragment.setArguments(args);
             requireActivity().getSupportFragmentManager()
                 .beginTransaction()
@@ -85,7 +89,7 @@ public class HomeFragment extends Fragment {
         this.recyclerAllProducts = recyclerAllProducts;
 
         // Filter content based on selectedTab
-        filterCategoryContent(view, selectedTab);
+        filterCategoryContent(view, currentTab);
 
         return view;
     }
@@ -93,10 +97,32 @@ public class HomeFragment extends Fragment {
     private RecyclerView recyclerAllProducts;
 
     private void reloadWithTab(String tab) {
-        requireActivity().getSupportFragmentManager()
-            .beginTransaction()
-            .replace(R.id.fragment_container, HomeFragment.newInstance(tab))
-            .commit();
+        try {
+            if (tab.equals("All")) {
+                CategoryProductsFragment fragment = new CategoryProductsFragment();
+                Bundle args = new Bundle();
+                args.putString("mainCategory", "All");
+                args.putString("category", "All");
+                fragment.setArguments(args);
+                if (getActivity() != null) {
+                    getActivity().getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.fragment_container, fragment)
+                        .addToBackStack(null)
+                        .commit();
+                }
+            } else {
+                if (getActivity() != null) {
+                    getActivity().getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.fragment_container, HomeFragment.newInstance(tab))
+                        .commit();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(getContext(), "Error loading content", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void filterCategoryContent(View view, String tab) {
@@ -125,14 +151,6 @@ public class HomeFragment extends Fragment {
             recyclerAllProducts.setVisibility(View.VISIBLE);
             if (categorySection != null) categorySection.setVisibility(View.GONE);
             if (homeContentSection != null) homeContentSection.setVisibility(View.GONE);
-            // Sample data
-            List<Product> products = new ArrayList<>();
-            products.add(new Product(R.drawable.ic_image_placeholder, "Brooklyn T-shirt", "R$ 49,99", Arrays.asList(0xFF000000, 0xFFFFFFFF, 0xFFB87333)));
-            products.add(new Product(R.drawable.ic_image_placeholder, "T Shirt Cropped Oversized", "R$ 18,90", Arrays.asList(0xFF000000, 0xFF808080)));
-            products.add(new Product(R.drawable.ic_image_placeholder, "Winner Sport T-shirt", "R$ 72,90", Arrays.asList(0xFF000000, 0xFF0000FF, 0xFF008000)));
-            products.add(new Product(R.drawable.ic_image_placeholder, "Animated Loose T-shirt", "R$ 51,95", Arrays.asList(0xFF000000, 0xFFFF0000)));
-            ProductListAdapter adapter = new ProductListAdapter(getContext(), products);
-            recyclerAllProducts.setAdapter(adapter);
         } else {
             if (carousel != null) ((View)carousel.getParent()).setVisibility(View.VISIBLE);
             recyclerAllProducts.setVisibility(View.GONE);
@@ -188,6 +206,19 @@ public class HomeFragment extends Fragment {
 
         card.addView(image);
         card.addView(label);
+        // Add click listener to open CategoryProductsFragment
+        card.setOnClickListener(v -> {
+            CategoryProductsFragment fragment = new CategoryProductsFragment();
+            Bundle args = new Bundle();
+            args.putString("mainCategory", selectedTab);
+            args.putString("category", categoryName);
+            fragment.setArguments(args);
+            requireActivity().getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.fragment_container, fragment)
+                .addToBackStack(null)
+                .commit();
+        });
         carousel.addView(card);
     }
 } 

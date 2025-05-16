@@ -30,13 +30,13 @@ class ProductAdapter(private val products: List<SellerProduct>) :
 
     override fun onBindViewHolder(holder: ProductViewHolder, position: Int) {
         val product = products[position]
-        holder.binding.textProductName.text = product.name
-        holder.binding.textProductPrice.text = "₱${product.price}"
+        holder.binding.txtProductName.text = product.name
+        holder.binding.txtProductPrice.text = "₱${product.price}"
         holder.binding.textProductStock.text = "Stock: ${product.stock}"
         Glide.with(holder.itemView.context)
             .load(product.imageUrl)
             .placeholder(R.drawable.placeholder_image)
-            .into(holder.binding.imageProduct)
+            .into(holder.binding.imgProduct)
     }
 
     override fun getItemCount() = products.size

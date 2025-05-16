@@ -638,7 +638,7 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
             .addOnSuccessListener(queryDocumentSnapshots -> {
                 for (DocumentSnapshot document : queryDocumentSnapshots) {
                     Product product = document.toObject(Product.class);
-                    if (product != null && product.stock > 0) {
+                    if (product != null && product.isAvailable) {
                         product.id = document.getId();
                         products.add(product);
                     }
@@ -716,9 +716,15 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
                 .placeholder(R.drawable.placeholder_image)
                 .error(R.drawable.error_image)
                 .centerCrop();
-            if (product.imageUrl != null && !product.imageUrl.isEmpty()) {
+            String imageUrl = null;
+            if (product.coverPhotoUri != null && !product.coverPhotoUri.isEmpty()) {
+                imageUrl = product.coverPhotoUri;
+            } else if (product.productImageUris != null && !product.productImageUris.isEmpty()) {
+                imageUrl = product.productImageUris.get(0);
+            }
+            if (imageUrl != null && !imageUrl.isEmpty()) {
                 Glide.with(holder.itemView.getContext())
-                    .load(product.imageUrl)
+                    .load(imageUrl)
                     .apply(requestOptions)
                     .transition(DrawableTransitionOptions.withCrossFade())
                     .into(holder.productImage);
