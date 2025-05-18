@@ -54,14 +54,17 @@ class SellerProductsFragment : Fragment() {
             .whereEqualTo("sellerId", userId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) return@addSnapshotListener
+                if (_binding == null) return@addSnapshotListener
                 productList.clear()
                 snapshot?.forEach { doc ->
+                    val imageUrl = (doc.get("productImageUris") as? List<*>)?.firstOrNull() as? String
+                        ?: doc.getString("coverPhotoUri") ?: ""
                     val product = SellerProduct(
                         id = doc.id,
                         name = doc.getString("name") ?: "",
                         price = doc.getDouble("price") ?: 0.0,
                         stock = (doc.getLong("stock") ?: 0L).toInt(),
-                        imageUrl = doc.getString("imageUrl") ?: "",
+                        imageUrl = imageUrl,
                         status = doc.getString("status") ?: ""
                     )
                     productList.add(product)

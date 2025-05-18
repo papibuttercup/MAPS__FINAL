@@ -12,6 +12,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
+import com.bumptech.glide.Glide;
 
 public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.ViewHolder> {
     private List<Product> products;
@@ -40,7 +41,10 @@ public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.
             imageUri = product.productImageUris.get(0);
         }
         if (imageUri != null && !imageUri.isEmpty()) {
-            holder.imgProduct.setImageURI(Uri.parse(imageUri));
+            Glide.with(context)
+                .load(imageUri)
+                .placeholder(R.drawable.ic_image_placeholder)
+                .into(holder.imgProduct);
         } else {
             holder.imgProduct.setImageResource(R.drawable.ic_image_placeholder);
         }

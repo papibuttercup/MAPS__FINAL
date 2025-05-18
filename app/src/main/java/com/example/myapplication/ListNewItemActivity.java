@@ -21,6 +21,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -220,13 +222,64 @@ public class ListNewItemActivity extends AppCompatActivity {
             return;
         }
 
-        progressDialog.setMessage("Adding product...");
+        progressDialog.setMessage("Uploading images...");
         progressDialog.show();
 
-        // For demo: just store imageUri as string. In production, upload to Firebase Storage and get URL.
+        FirebaseStorage storage = FirebaseStorage.getInstance();
+        StorageReference storageRef = storage.getReference();
+        String sellerId = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : "";
+        long timestamp = System.currentTimeMillis();
+        StorageReference coverRef = storageRef.child("products/" + sellerId + "/" + timestamp + "_cover.jpg");
+
+        coverRef.putFile(coverPhotoUri)
+            .continueWithTask(task -> {
+                if (!task.isSuccessful()) throw task.getException();
+                return coverRef.getDownloadUrl();
+            })
+            .addOnSuccessListener(coverUri -> {
+                uploadProductImages(storageRef, sellerId, timestamp, coverUri.toString(), name, description, price, stock, weight, parcelSize);
+            })
+            .addOnFailureListener(e -> {
+                progressDialog.dismiss();
+                Toast.makeText(this, "Failed to upload cover photo: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            });
+    }
+
+    private void uploadProductImages(StorageReference storageRef, String sellerId, long timestamp, String coverUrl, String name, String description, double price, int stock, double weight, String parcelSize) {
+        ArrayList<String> imageUrls = new ArrayList<>();
+        ArrayList<Uri> uris = new ArrayList<>(productImageUris);
+        if (uris.isEmpty()) {
+            saveProductToFirestore(coverUrl, imageUrls, name, description, price, stock, weight, parcelSize);
+            return;
+        }
+        uploadNextImage(storageRef, sellerId, timestamp, uris, imageUrls, 0, coverUrl, name, description, price, stock, weight, parcelSize);
+    }
+
+    private void uploadNextImage(StorageReference storageRef, String sellerId, long timestamp, ArrayList<Uri> uris, ArrayList<String> imageUrls, int index, String coverUrl, String name, String description, double price, int stock, double weight, String parcelSize) {
+        if (index >= uris.size()) {
+            saveProductToFirestore(coverUrl, imageUrls, name, description, price, stock, weight, parcelSize);
+            return;
+        }
+        Uri uri = uris.get(index);
+        StorageReference imgRef = storageRef.child("products/" + sellerId + "/" + timestamp + "_img_" + index + ".jpg");
+        imgRef.putFile(uri)
+            .continueWithTask(task -> {
+                if (!task.isSuccessful()) throw task.getException();
+                return imgRef.getDownloadUrl();
+            })
+            .addOnSuccessListener(imgUri -> {
+                imageUrls.add(imgUri.toString());
+                uploadNextImage(storageRef, sellerId, timestamp, uris, imageUrls, index + 1, coverUrl, name, description, price, stock, weight, parcelSize);
+            })
+            .addOnFailureListener(e -> {
+                progressDialog.dismiss();
+                Toast.makeText(this, "Failed to upload product image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            });
+    }
+
+    private void saveProductToFirestore(String coverUrl, ArrayList<String> imageUrls, String name, String description, double price, int stock, double weight, String parcelSize) {
         String sellerId = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : "";
         String sellerName = ""; // Optionally fetch seller name from Firestore if needed
-
         Map<String, Object> product = new HashMap<>();
         product.put("mainCategory", selectedMainCategory);
         product.put("category", selectedCategory);
@@ -236,25 +289,23 @@ public class ListNewItemActivity extends AppCompatActivity {
         product.put("stock", stock);
         product.put("weight", weight);
         product.put("parcelSize", parcelSize);
-        product.put("coverPhotoUri", coverPhotoUri.toString());
-        ArrayList<String> imageUris = new ArrayList<>();
-        for (Uri uri : productImageUris) imageUris.add(uri.toString());
-        product.put("productImageUris", imageUris);
+        product.put("coverPhotoUri", coverUrl);
+        product.put("productImageUris", imageUrls);
         product.put("isAvailable", true);
         product.put("sellerId", sellerId);
         product.put("sellerName", sellerName);
         product.put("createdAt", System.currentTimeMillis());
 
         db.collection("products")
-                .add(product)
-                .addOnSuccessListener(documentReference -> {
-                    progressDialog.dismiss();
-                    Toast.makeText(this, "Product added successfully!", Toast.LENGTH_SHORT).show();
-                    finish();
-                })
-                .addOnFailureListener(e -> {
-                    progressDialog.dismiss();
-                    Toast.makeText(this, "Failed to add product: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
+            .add(product)
+            .addOnSuccessListener(documentReference -> {
+                progressDialog.dismiss();
+                Toast.makeText(this, "Product added successfully!", Toast.LENGTH_SHORT).show();
+                finish();
+            })
+            .addOnFailureListener(e -> {
+                progressDialog.dismiss();
+                Toast.makeText(this, "Failed to add product: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            });
     }
 } 

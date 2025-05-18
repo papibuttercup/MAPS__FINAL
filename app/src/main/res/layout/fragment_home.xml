@@ -9,7 +9,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Header with Search and Tabs -->
+        <!-- Header with Search -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -61,167 +61,84 @@
                 android:contentDescription="Messages" />
         </LinearLayout>
 
-        <!-- Tab Bar -->
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/background"
-            android:paddingVertical="8dp"
-            android:fillViewport="true">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center">
-                    <Button 
-                        android:id="@+id/btnAll"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="All" 
-                        style="@style/Widget.MaterialComponents.Button.TextButton"/>
-                    <View
-                        android:id="@+id/underlineAll"
-                        android:layout_width="match_parent"
-                        android:layout_height="2dp"
-                        android:background="@color/colorAccent"
-                        android:visibility="gone"/>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center">
-                    <Button 
-                        android:id="@+id/btnWomen"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Women" 
-                        style="@style/Widget.MaterialComponents.Button.TextButton"/>
-                    <View
-                        android:id="@+id/underlineWomen"
-                        android:layout_width="match_parent"
-                        android:layout_height="2dp"
-                        android:background="@color/colorAccent"
-                        android:visibility="visible"/>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center">
-                    <Button 
-                        android:id="@+id/btnMen"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Men" 
-                        style="@style/Widget.MaterialComponents.Button.TextButton"/>
-                    <View
-                        android:id="@+id/underlineMen"
-                        android:layout_width="match_parent"
-                        android:layout_height="2dp"
-                        android:background="@color/colorAccent"
-                        android:visibility="gone"/>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center">
-                    <Button 
-                        android:id="@+id/btnKids"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Kids" 
-                        style="@style/Widget.MaterialComponents.Button.TextButton"/>
-                    <View
-                        android:id="@+id/underlineKids"
-                        android:layout_width="match_parent"
-                        android:layout_height="2dp"
-                        android:background="@color/colorAccent"
-                        android:visibility="gone"/>
-                </LinearLayout>
-            </LinearLayout>
-        </HorizontalScrollView>
-
+        <!-- Home Content Section -->
         <LinearLayout
             android:id="@+id/homeContentSection"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Main Banner -->
-            <ImageView
-                android:layout_width="match_parent"
-                android:layout_height="160dp"
-                android:layout_marginVertical="8dp"
-                android:contentDescription="Main Banner"
-                android:scaleType="centerCrop"
-                android:src="@drawable/ic_banner_placeholder"
-                android:background="@color/background" />
-
-            <!-- Category Section -->
-            <LinearLayout
-                android:id="@+id/categorySection"
-                android:layout_width="match_parent"
+            <!-- Top Categories Section -->
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingHorizontal="16dp"
-                android:layout_marginTop="16dp">
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="CATEGORY"
-                    android:textStyle="bold"
-                    android:textSize="16sp"
-                    android:textColor="@color/colorPrimary" />
-                <TextView
-                    android:id="@+id/seeAllCategories"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="See all >"
-                    android:textColor="@color/colorAccent"
-                    android:textSize="14sp"
-                    android:paddingStart="8dp"
-                    android:textStyle="bold" />
-            </LinearLayout>
+                android:text="Top Categories"
+                android:textStyle="bold"
+                android:textSize="20sp"
+                android:textColor="@color/black"
+                android:layout_marginTop="16dp"
+                android:layout_marginStart="16dp" />
 
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerTopCategories"
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                android:layout_marginTop="8dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:orientation="horizontal"
+                android:overScrollMode="never"
+                android:scrollbars="none" />
+
+            <!-- Categories Carousel -->
             <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:scrollbars="none"
                 android:overScrollMode="never"
-                android:scrollbars="none">
+                android:layout_marginTop="24dp">
+
                 <LinearLayout
+                    android:id="@+id/categoriesCarousel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:paddingHorizontal="8dp">
-                    <!-- Category cards will be added dynamically -->
-                </LinearLayout>
+                    android:paddingHorizontal="16dp"/>
+
             </HorizontalScrollView>
+
+            <!-- See All Categories -->
+            <TextView
+                android:id="@+id/seeAllCategories"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="See All Categories"
+                android:textColor="@color/colorPrimary"
+                android:layout_marginTop="8dp"
+                android:layout_marginStart="16dp"
+                android:padding="8dp"/>
+
+            <!-- Thrift Shops Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Thrift Shops in Baguio"
+                android:textStyle="bold"
+                android:textSize="20sp"
+                android:textColor="@color/black"
+                android:layout_marginTop="24dp"
+                android:layout_marginStart="16dp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerShops"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:overScrollMode="never"
+                android:scrollbars="none" />
+
         </LinearLayout>
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerAllProducts"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            android:layout_marginTop="12dp"
-            android:padding="8dp"/>
-
     </LinearLayout>
 </ScrollView> 
