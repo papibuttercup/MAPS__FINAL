@@ -112,14 +112,26 @@
                         android:textStyle="bold"
                         android:layout_marginBottom="16dp" />
 
+                    <!-- Set Location Button (visible if no location is set) -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnIdentifyLocation"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Set Shop Location"
+                        android:text="Set Location on Map"
                         android:textAllCaps="false"
                         app:icon="@drawable/ic_location_on"
-                        app:iconGravity="textStart" />
+                        app:iconGravity="textStart"
+                        android:layout_marginBottom="12dp"
+                        android:visibility="visible" />
+
+                    <!-- Mini Map Preview (visible if location is set) -->
+                    <org.maplibre.android.maps.MapView
+                        android:id="@+id/miniMapView"
+                        android:layout_width="match_parent"
+                        android:layout_height="160dp"
+                        android:layout_marginBottom="12dp"
+                        android:background="@drawable/bottom_sheet_background"
+                        android:visibility="gone" />
 
                     <TextView
                         android:id="@+id/tvCurrentLocation"
@@ -128,6 +140,17 @@
                         android:layout_marginTop="8dp"
                         android:text="No location set"
                         android:textColor="@android:color/darker_gray" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnDeleteLocation"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Delete Location"
+                        android:textAllCaps="false"
+                        app:icon="@android:drawable/ic_menu_delete"
+                        app:iconGravity="textStart"
+                        android:layout_marginTop="8dp"
+                        android:visibility="gone" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

@@ -4,95 +4,107 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
-import android.widget.TextView;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import android.widget.HorizontalScrollView;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import java.util.ArrayList;
+import java.util.List;
 
-public class HomeFragment extends Fragment {
+public class HomeFragment extends Fragment implements ThriftShopAdapter.OnShopClickListener {
+    private RecyclerView recyclerShops;
+    private ThriftShopAdapter adapter;
+    private List<ThriftShop> shopList;
+    private FirebaseFirestore db;
 
-    @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_home, container, false);
+        
+        // Initialize Firestore
+        db = FirebaseFirestore.getInstance();
 
-        // See all categories
-        TextView seeAllCategories = view.findViewById(R.id.seeAllCategories);
-        seeAllCategories.setOnClickListener(v -> {
-            CategoriesFragment fragment = new CategoriesFragment();
-            requireActivity().getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.fragment_container, fragment)
-                .addToBackStack(null)
-                .commit();
-        });
-
-        // Setup categories carousel
-        LinearLayout carousel = view.findViewById(R.id.categoriesCarousel);
-        if (carousel != null) {
-            String[] categories = getResources().getStringArray(R.array.categories_women);
-            for (String category : categories) {
-                addCategoryCard(carousel, "Women", category);
-            }
-        }
-
+        // Initialize RecyclerView for thrift shops
+        recyclerShops = view.findViewById(R.id.recyclerShops);
+        recyclerShops.setLayoutManager(new LinearLayoutManager(getContext()));
+        
+        // Initialize shop list and adapter
+        shopList = new ArrayList<>();
+        adapter = new ThriftShopAdapter(getContext(), shopList, this);
+        recyclerShops.setAdapter(adapter);
+        
+        // Load thrift shops
+        loadThriftShops();
+        
         return view;
     }
 
-    private void addCategoryCard(LinearLayout carousel, String mainCategory, String categoryName) {
-        if (carousel == null || getContext() == null) return;
-        
-        try {
-            android.content.Context context = carousel.getContext();
-            LinearLayout card = new LinearLayout(context);
-            card.setOrientation(LinearLayout.VERTICAL);
-            card.setGravity(android.view.Gravity.CENTER);
-            LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
-                    (int) (90 * context.getResources().getDisplayMetrics().density),
-                    LinearLayout.LayoutParams.WRAP_CONTENT);
-            cardParams.setMarginEnd((int) (12 * context.getResources().getDisplayMetrics().density));
-            card.setLayoutParams(cardParams);
-
-            android.widget.ImageView image = new android.widget.ImageView(context);
-            LinearLayout.LayoutParams imgParams = new LinearLayout.LayoutParams(
-                    (int) (72 * context.getResources().getDisplayMetrics().density),
-                    (int) (72 * context.getResources().getDisplayMetrics().density));
-            image.setLayoutParams(imgParams);
-            image.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
-            image.setImageResource(R.drawable.ic_image_placeholder);
-            image.setBackgroundResource(R.drawable.category_card_bg);
-            image.setContentDescription(categoryName);
-            image.setPadding(0, (int) (4 * context.getResources().getDisplayMetrics().density), 0, (int) (4 * context.getResources().getDisplayMetrics().density));
-
-            android.widget.TextView label = new android.widget.TextView(context);
-            label.setLayoutParams(new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT));
-            label.setText(categoryName);
-            label.setTextSize(13);
-            label.setTextColor(context.getResources().getColor(R.color.colorPrimary));
-
-            card.addView(image);
-            card.addView(label);
-            card.setOnClickListener(v -> {
-                // Navigate to For You page with the selected category
-                ForYouFragment fragment = new ForYouFragment();
-                Bundle args = new Bundle();
-                args.putString("category", categoryName);
-                args.putString("mainCategory", mainCategory);
-                fragment.setArguments(args);
-                requireActivity().getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.fragment_container, fragment)
-                    .addToBackStack(null)
-                    .commit();
+    private void loadThriftShops() {
+        db.collection("sellers")
+            .get()
+            .addOnSuccessListener(queryDocumentSnapshots -> {
+                shopList.clear();
+                for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                    ThriftShop shop = new ThriftShop();
+                    shop.setId(document.getId());
+                    shop.setName(document.getString("shopName"));
+                    shop.setType("Thrift Shop");
+                    // Use shopLocation or locationName if available
+                    String shopLocation = document.getString("shopLocation");
+                    String locationName = document.getString("locationName");
+                    if (shopLocation != null && !shopLocation.isEmpty()) {
+                        shop.setLocation(shopLocation);
+                    } else if (locationName != null && !locationName.isEmpty()) {
+                        shop.setLocation(locationName);
+                    } else {
+                        shop.setLocation("");
+                    }
+                    shop.setCoverPhotoUri(document.getString("coverPhotoUri"));
+                    // Handle potential null values for coordinates
+                    Double latitude = document.getDouble("latitude");
+                    Double longitude = document.getDouble("longitude");
+                    if (latitude != null && longitude != null) {
+                        shop.setLatitude(latitude);
+                        shop.setLongitude(longitude);
+                    }
+                    shop.setDescription(document.getString("description"));
+                    shopList.add(shop);
+                }
+                if (adapter != null) {
+                    adapter.notifyDataSetChanged();
+                }
+                if (getContext() != null) {
+                    Toast.makeText(getContext(), "Loaded " + shopList.size() + " shops", 
+                                 Toast.LENGTH_SHORT).show();
+                }
+            })
+            .addOnFailureListener(e -> {
+                if (getContext() != null) {
+                    Toast.makeText(getContext(), "Error loading shops: " + e.getMessage(), 
+                                 Toast.LENGTH_SHORT).show();
+                }
             });
-            carousel.addView(card);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    }
+
+    @Override
+    public void onVisitShop(ThriftShop shop) {
+        // Open ShopProductsFragment and pass sellerId and shopName
+        ShopProductsFragment fragment = ShopProductsFragment.newInstance(shop.getId(), shop.getName());
+        requireActivity().getSupportFragmentManager()
+            .beginTransaction()
+            .replace(R.id.fragment_container, fragment) // Make sure this is your main container ID
+            .addToBackStack(null)
+            .commit();
+    }
+
+    @Override
+    public void onViewLocation(ThriftShop shop) {
+        // TODO: Navigate to map with shop location
+        Toast.makeText(getContext(), "Viewing location of: " + shop.getName(), 
+                     Toast.LENGTH_SHORT).show();
     }
 } 

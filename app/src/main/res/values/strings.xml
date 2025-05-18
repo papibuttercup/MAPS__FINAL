@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">My Application</string>
     <string name="Thriffty">Thriffty</string>
-    <string name="maptiler_api_key">YOUR_MAPTILER_API_KEY_HERE</string>
+    <string name="maptiler_api_key">NtwYw8OygXBT7mhxxFKt</string>
     <string-array name="categories">
         <item>Clothing</item>
         <item>Electronics</item>

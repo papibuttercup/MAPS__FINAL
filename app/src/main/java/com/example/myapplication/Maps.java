@@ -92,6 +92,7 @@ import java.util.concurrent.TimeUnit;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import androidx.cardview.widget.CardView;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 
 public class Maps extends AppCompatActivity implements OnMapReadyCallback {
     private static final int PERMISSIONS_REQUEST_LOCATION = 99;
@@ -124,6 +125,11 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
     private FloatingActionButton addMarkerFab;
     private CardView searchCard;
     private ImageView closeSearch;
+
+    private LatLng selectedShopLatLng = null;
+    private String selectedShopLocationName = null;
+    private Marker shopMarker = null;
+    private Button confirmShopLocationButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -218,6 +224,57 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
         });
 
         searchCard.setVisibility(View.GONE);
+
+        // Add confirm button for shop location
+        confirmShopLocationButton = new Button(this);
+        confirmShopLocationButton.setText("Set This Location");
+        confirmShopLocationButton.setVisibility(View.GONE);
+        ((ViewGroup) mapView.getParent()).addView(confirmShopLocationButton);
+        confirmShopLocationButton.setOnClickListener(v -> {
+            if (selectedShopLatLng != null && selectedShopLocationName != null) {
+                Intent result = new Intent();
+                result.putExtra("latitude", selectedShopLatLng.getLatitude());
+                result.putExtra("longitude", selectedShopLatLng.getLongitude());
+                result.putExtra("locationName", selectedShopLocationName);
+                setResult(RESULT_OK, result);
+                finish();
+            } else {
+                Toast.makeText(this, "Please tap on the map to set your shop location", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // Handle intent for shop location selection
+        Intent intent = getIntent();
+        if (intent != null && intent.hasExtra("locationName")) {
+            selectedShopLocationName = intent.getStringExtra("locationName");
+            LatLng center = new LatLng(16.4023, 120.5960); // Default: Baguio
+            mapView.getMapAsync(mapLibreMap -> {
+                mapLibreMap.moveCamera(CameraUpdateFactory.newLatLngZoom(center, 15f));
+                Toast.makeText(this, "Tap on the map to set your shop location, then click 'Set This Location'", Toast.LENGTH_LONG).show();
+                confirmShopLocationButton.setVisibility(View.VISIBLE);
+                // Only allow tap-to-place-marker, no marker click listeners
+                mapLibreMap.addOnMapClickListener(point -> {
+                    selectedShopLatLng = point;
+                    if (shopMarker != null) mapLibreMap.removeMarker(shopMarker);
+                    shopMarker = mapLibreMap.addMarker(new MarkerOptions().position(point).title(selectedShopLocationName));
+                    return true;
+                });
+                // Do NOT set any OnMarkerClickListener in this mode
+                confirmShopLocationButton.setOnClickListener(v -> {
+                    if (selectedShopLatLng != null && selectedShopLocationName != null) {
+                        Intent result = new Intent();
+                        result.putExtra("latitude", selectedShopLatLng.getLatitude());
+                        result.putExtra("longitude", selectedShopLatLng.getLongitude());
+                        result.putExtra("locationName", selectedShopLocationName);
+                        setResult(RESULT_OK, result);
+                        finish();
+                    } else {
+                        Toast.makeText(this, "Please tap on the map to set your shop location", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            });
+            return;
+        }
     }
 
     private void checkSellerVerification() {
@@ -356,15 +413,16 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
             enableLocationComponent(style);
         }
 
-        // loadAllSellerMarkers();
-
-        // Remove map tap-to-add-marker logic
-        maplibreMap.setOnMarkerClickListener(marker -> {
-            String shopName = marker.getTitle();
-            String locationName = "Sample Location";
-            showCollapsedBottomSheet(shopName, locationName);
-            return true;
-        });
+        // Only set marker click listeners if NOT in shop location selection mode
+        Intent intent = getIntent();
+        if (intent == null || !intent.hasExtra("locationName")) {
+            maplibreMap.setOnMarkerClickListener(marker -> {
+                String shopName = marker.getTitle();
+                String locationName = "Sample Location";
+                showCollapsedBottomSheet(shopName, locationName);
+                return true;
+            });
+        }
     }
 
     private void loadAllSellerMarkers() {
