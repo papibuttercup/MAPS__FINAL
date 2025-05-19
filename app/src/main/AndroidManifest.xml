@@ -9,6 +9,10 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"
+        tools:ignore="SelectedPhotoAccess" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
 
     <application
         android:name=".MyApplication"
@@ -55,7 +59,8 @@
         <activity
             android:name=".ForgotPasswordActivity"
             android:exported="false"
-            android:theme="@style/Theme.MyApplication" />
+            android:theme="@style/Theme.MyApplication"
+            tools:ignore="Instantiatable" />
 
         <activity
             android:name=".ModeratorActivity"
@@ -89,17 +94,7 @@
             android:name=".CreateSellerAccountActivity"
             android:exported="false"
             android:theme="@style/Theme.MyApplication"/>
-            
-        <activity 
-            android:name=".ListedItemsActivity"
-            android:exported="false"
-            android:theme="@style/Theme.MyApplication"/>
-            
-        <activity 
-            android:name=".OrderDetailsActivity"
-            android:exported="false"
-            android:theme="@style/Theme.MyApplication"/>
-            
+
         <activity 
             android:name=".FAQActivity"
             android:exported="false"
@@ -112,6 +107,11 @@
 
         <activity
             android:name=".ListNewItemActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MyApplication"/>
+
+        <activity
+            android:name=".EditProductActivity"
             android:exported="false"
             android:theme="@style/Theme.MyApplication"/>
 

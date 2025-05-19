@@ -39,7 +39,7 @@ public class ForYouFragment extends Fragment {
         recyclerView.setLayoutManager(new GridLayoutManager(getContext(), 2));
         
         products = new ArrayList<>();
-        adapter = new ProductListAdapter(getContext(), products);
+        adapter = new ProductListAdapter(getContext(), products, false);
         recyclerView.setAdapter(adapter);
         
         db = FirebaseFirestore.getInstance();

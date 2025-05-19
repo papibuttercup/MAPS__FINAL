@@ -14,23 +14,35 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
 import com.bumptech.glide.Glide;
+import android.content.Intent;
 
 public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.ViewHolder> {
     private List<Product> products;
     private Context context;
     private OnEditProductListener editListener;
+    private OnDeleteProductListener deleteListener;
+    private boolean isSeller = false;
 
     public interface OnEditProductListener {
         void onEditProduct(Product product);
+    }
+
+    public interface OnDeleteProductListener {
+        void onDeleteProduct(Product product);
     }
 
     public void setOnEditProductListener(OnEditProductListener listener) {
         this.editListener = listener;
     }
 
-    public ProductListAdapter(Context context, List<Product> products) {
+    public void setOnDeleteProductListener(OnDeleteProductListener listener) {
+        this.deleteListener = listener;
+    }
+
+    public ProductListAdapter(Context context, List<Product> products, boolean isSeller) {
         this.context = context;
         this.products = products;
+        this.isSeller = isSeller;
     }
 
     @NonNull
@@ -65,7 +77,33 @@ public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.
             stockView.setText("Stock: " + (product.stock != null ? product.stock : "N/A"));
         }
         if (holder.btnEditProduct != null) {
-            holder.btnEditProduct.setVisibility(View.GONE);
+            if (isSeller) {
+                holder.btnEditProduct.setVisibility(View.VISIBLE);
+                holder.btnEditProduct.setOnClickListener(v -> {
+                    Intent intent = new Intent(context, EditProductActivity.class);
+                    intent.putExtra("productId", product.id);
+                    context.startActivity(intent);
+                });
+            } else {
+                holder.btnEditProduct.setVisibility(View.GONE);
+            }
+        }
+        if (holder.btnDeleteProduct != null) {
+            if (isSeller) {
+                holder.btnDeleteProduct.setVisibility(View.VISIBLE);
+                holder.btnDeleteProduct.setOnClickListener(v -> {
+                    new android.app.AlertDialog.Builder(context)
+                        .setTitle("Delete Product")
+                        .setMessage("Are you sure you want to delete this product?")
+                        .setPositiveButton("Delete", (dialog, which) -> {
+                            if (deleteListener != null) deleteListener.onDeleteProduct(product);
+                        })
+                        .setNegativeButton("Cancel", null)
+                        .show();
+                });
+            } else {
+                holder.btnDeleteProduct.setVisibility(View.GONE);
+            }
         }
         holder.itemView.setOnClickListener(v -> {
             android.content.Intent intent = new android.content.Intent(context, ProductDetailsActivity.class);
@@ -82,13 +120,14 @@ public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.
     public static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView imgProduct;
         TextView txtProductName, txtProductPrice;
-        ImageButton btnEditProduct;
+        ImageButton btnEditProduct, btnDeleteProduct;
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             imgProduct = itemView.findViewById(R.id.imgProduct);
             txtProductName = itemView.findViewById(R.id.txtProductName);
             txtProductPrice = itemView.findViewById(R.id.txtProductPrice);
             btnEditProduct = itemView.findViewById(R.id.btnEditProduct);
+            btnDeleteProduct = itemView.findViewById(R.id.btnDeleteProduct);
         }
     }
 } 

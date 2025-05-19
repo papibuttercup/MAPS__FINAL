@@ -1,66 +1,194 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
-
-    <androidx.viewpager2.widget.ViewPager2
-        android:id="@+id/viewPagerImages"
-        android:layout_width="match_parent"
-        android:layout_height="300dp"/>
-
-    <TextView
-        android:id="@+id/txtProductName"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:padding="16dp"/>
-
-    <TextView
-        android:id="@+id/txtProductPrice"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="18sp"
-        android:textColor="#8B2CF5"
-        android:paddingLeft="16dp"
-        android:paddingBottom="8dp"/>
-
-    <TextView
-        android:id="@+id/txtProductStock"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="16sp"
-        android:textColor="#888888"
-        android:paddingLeft="16dp"
-        android:paddingBottom="8dp"/>
-
-    <!-- Add more product info as needed -->
+    android:background="#F5F5F5">
 
     <LinearLayout
+        android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_gravity="bottom"
-        android:background="@android:color/white"
-        android:padding="8dp">
+        android:padding="0dp">
 
+        <!-- Product Image Carousel or Single Image -->
+        <androidx.viewpager2.widget.ViewPager2
+            android:id="@+id/viewPagerImages"
+            android:layout_width="match_parent"
+            android:layout_height="250dp"
+            android:background="#FFF"
+            android:layout_marginBottom="0dp"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/imgProduct"
+            android:layout_width="match_parent"
+            android:layout_height="250dp"
+            android:scaleType="centerCrop"
+            android:background="@android:color/darker_gray"
+            android:contentDescription="Product image"
+            android:layout_marginBottom="0dp"
+            android:visibility="gone" />
+
+        <!-- Product Info Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="4dp">
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp">
+
+                <!-- Product Name and Discount -->
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/txtProductName"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Product Name"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="#222" />
+
+                    <TextView
+                        android:id="@+id/txtDiscountBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="50% OFF"
+                        android:textColor="#FFF"
+                        android:background="@android:color/holo_red_light"
+                        android:paddingLeft="8dp"
+                        android:paddingRight="8dp"
+                        android:paddingTop="2dp"
+                        android:paddingBottom="2dp"
+                        android:textSize="12sp"
+                        android:layout_marginStart="8dp"
+                        android:visibility="gone"/>
+                </LinearLayout>
+
+                <!-- Price Row -->
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="8dp">
+
+                    <TextView
+                        android:id="@+id/txtProductPrice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="₱158.900"
+                        android:textColor="#8B2CF5"
+                        android:textStyle="bold"
+                        android:textSize="20sp"
+                        android:layout_marginEnd="12dp"/>
+
+                    <TextView
+                        android:id="@+id/txtOldPrice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="₱258.900"
+                        android:textColor="#888"
+                        android:textSize="16sp"
+                        android:layout_marginEnd="8dp"
+                        android:visibility="gone"/>
+                </LinearLayout>
+
+                <!-- Guarantee/Info Section -->
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="8dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@android:drawable/ic_menu_info_details"
+                        android:layout_marginEnd="8dp"/>
+                    <TextView
+                        android:id="@+id/txtGuarantee"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Shopee Guarantees 100% Ori"
+                        android:textColor="#222"
+                        android:textSize="14sp"/>
+                </LinearLayout>
+
+                <!-- Ratings, Sold, Icons Row -->
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="8dp">
+
+                    <TextView
+                        android:id="@+id/txtRating"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="★ 5.0"
+                        android:textColor="#FFD700"
+                        android:textSize="14sp"
+                        android:layout_marginEnd="8dp"/>
+                    <TextView
+                        android:id="@+id/txtSold"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="300 Sold"
+                        android:textColor="#888"
+                        android:textSize="14sp"
+                        android:layout_marginEnd="8dp"/>
+                    <!-- Add more icons as needed -->
+                </LinearLayout>
+
+                <!-- Feature Icons Row -->
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="8dp">
+
+                    <!-- Example icons -->
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@android:drawable/ic_menu_revert"
+                        android:layout_marginEnd="8dp"/>
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@android:drawable/ic_menu_send"
+                        android:layout_marginEnd="8dp"/>
+                    <!-- Add more as needed -->
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Buy Button at the Bottom -->
         <Button
             android:id="@+id/btnBuyNow"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Buy Now"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Buy"
+            android:textStyle="bold"
+            android:textColor="#FFF"
             android:backgroundTint="#FF5722"
-            android:textColor="@android:color/white"/>
-
-        <Button
-            android:id="@+id/btnAddToCart"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Add to Cart"
-            android:backgroundTint="#8B2CF5"
-            android:textColor="@android:color/white"/>
+            android:layout_margin="16dp"/>
     </LinearLayout>
-</LinearLayout> 
+</ScrollView> 

@@ -1,3 +1,5 @@
+package com.example.myapplication;
+
 import android.content.Context;
 import android.content.Intent;
 import android.view.LayoutInflater;
@@ -12,12 +14,12 @@ import com.example.myapplication.Product;
 import com.example.myapplication.R;
 import com.example.myapplication.BuyNowActivity;
 
-public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ViewHolder> {
+public class ProductAdapter1 extends RecyclerView.Adapter<ProductAdapter1.ViewHolder> {
 
     private Context context;
     private List<Product> productList;
 
-    public ProductAdapter(Context context, List<Product> productList) {
+    public ProductAdapter1(Context context, List<Product> productList) {
         this.context = context;
         this.productList = productList;
     }
@@ -63,7 +65,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ViewHold
             super(view);
             txtProductName = view.findViewById(R.id.txtProductName);
             txtProductPrice = view.findViewById(R.id.txtProductPrice);
-            txtProductStock = view.findViewById(R.id.txtProductStock);
+
             btnBuyNow = view.findViewById(R.id.btnBuyNow);
         }
     }

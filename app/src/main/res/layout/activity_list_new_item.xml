@@ -201,5 +201,15 @@
             android:textStyle="bold"
             android:elevation="2dp" />
 
+        <Button
+            android:id="@+id/btnDelete"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Delete Product"
+            android:backgroundTint="@android:color/holo_red_light"
+            android:textColor="@android:color/white"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
+
     </LinearLayout>
 </ScrollView> 

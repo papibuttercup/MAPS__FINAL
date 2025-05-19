@@ -26,7 +26,7 @@ public class LandingActivity extends AppCompatActivity {
                 startActivity(new Intent(this, AccountActivity.class));
                 return true;
             } else if (itemId == R.id.navigation_for_you) {
-                    showForYou();
+                showForYou();
                 return true;
             } else if (itemId == R.id.navigation_home) {
                 showHome();
@@ -34,6 +34,8 @@ public class LandingActivity extends AppCompatActivity {
             }
             return false;
         });
+        // Force the label to stay as 'For You'
+        bottomNavigation.getMenu().findItem(R.id.navigation_for_you).setTitle("For You");
     }
 
     private void showHome() {
