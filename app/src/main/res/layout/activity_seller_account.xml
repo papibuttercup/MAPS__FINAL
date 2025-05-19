@@ -151,6 +151,55 @@
                         app:iconGravity="textStart"
                         android:layout_marginTop="8dp"
                         android:visibility="gone" />
+
+                    <!-- Cover Photo Section -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Shop Cover Photo"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:layout_marginTop="24dp"
+                        android:layout_marginBottom="16dp" />
+
+                    <ImageView
+                        android:id="@+id/ivCoverPhoto"
+                        android:layout_width="match_parent"
+                        android:layout_height="200dp"
+                        android:scaleType="centerCrop"
+                        android:background="@drawable/bottom_sheet_background"
+                        android:src="@drawable/ic_add_photo"
+                        android:contentDescription="Shop Cover Photo" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="8dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSetCoverPhoto"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Set Cover Photo"
+                            android:textAllCaps="false"
+                            app:icon="@drawable/ic_add_photo"
+                            app:iconGravity="textStart"
+                            android:layout_marginEnd="4dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnDeleteCoverPhoto"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Delete Photo"
+                            android:textAllCaps="false"
+                            app:icon="@android:drawable/ic_menu_delete"
+                            app:iconGravity="textStart"
+                            android:layout_marginStart="4dp"
+                            android:visibility="gone" />
+                    </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

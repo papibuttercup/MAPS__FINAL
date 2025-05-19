@@ -78,6 +78,22 @@ class SellerAccountActivity : AppCompatActivity(), OnMapReadyCallback {
                     val shopDescription = document.getString("shopDescription") ?: ""
                     binding.etShopDescription.setText(shopDescription)
 
+                    // Set cover photo if available
+                    coverPhotoUrl = document.getString("coverPhotoUrl")
+                    if (!coverPhotoUrl.isNullOrEmpty()) {
+                        Glide.with(this)
+                            .load(coverPhotoUrl)
+                            .placeholder(R.drawable.ic_add_photo)
+                            .error(R.drawable.ic_add_photo)
+                            .into(binding.ivCoverPhoto)
+                        binding.btnDeleteCoverPhoto.visibility = android.view.View.VISIBLE
+                        binding.btnSetCoverPhoto.text = "Change Cover Photo"
+                    } else {
+                        binding.ivCoverPhoto.setImageResource(R.drawable.ic_add_photo)
+                        binding.btnDeleteCoverPhoto.visibility = android.view.View.GONE
+                        binding.btnSetCoverPhoto.text = "Set Cover Photo"
+                    }
+
                     // Set current location if available
                     val latitude = document.getDouble("latitude")
                     val longitude = document.getDouble("longitude")
@@ -99,6 +115,10 @@ class SellerAccountActivity : AppCompatActivity(), OnMapReadyCallback {
                     shopDocId = document.id
                 }
             }
+            .addOnFailureListener { e ->
+                Log.e("SellerAccount", "Failed to load user data: ${e.message}")
+                Toast.makeText(this, "Failed to load profile data: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
     }
 
     private fun setupButtons() {
@@ -107,6 +127,53 @@ class SellerAccountActivity : AppCompatActivity(), OnMapReadyCallback {
             val intent = Intent(this, Maps::class.java)
             intent.putExtra("locationName", "Shop Location")
             startActivityForResult(intent, 200)
+        }
+
+        // Set Cover Photo Button
+        binding.btnSetCoverPhoto.setOnClickListener {
+            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+            startActivityForResult(intent, PICK_COVER_PHOTO_REQUEST)
+        }
+
+        // Delete Cover Photo Button
+        binding.btnDeleteCoverPhoto.setOnClickListener {
+            val userId = auth.currentUser?.uid ?: return@setOnClickListener
+            progressDialog.setMessage("Deleting cover photo...")
+            progressDialog.show()
+
+            // Delete from Firestore
+            db.collection("sellers").document(userId)
+                .update("coverPhotoUrl", null)
+                .addOnSuccessListener {
+                    // Delete from Storage if URL exists
+                    if (!coverPhotoUrl.isNullOrEmpty()) {
+                        val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(coverPhotoUrl!!)
+                        storageRef.delete()
+                            .addOnSuccessListener {
+                                progressDialog.dismiss()
+                                binding.ivCoverPhoto.setImageResource(R.drawable.ic_add_photo)
+                                binding.btnDeleteCoverPhoto.visibility = android.view.View.GONE
+                                binding.btnSetCoverPhoto.text = "Set Cover Photo"
+                                coverPhotoUrl = null
+                                Toast.makeText(this, "Cover photo deleted successfully", Toast.LENGTH_SHORT).show()
+                            }
+                            .addOnFailureListener {
+                                progressDialog.dismiss()
+                                Toast.makeText(this, "Failed to delete cover photo from storage", Toast.LENGTH_SHORT).show()
+                            }
+                    } else {
+                        progressDialog.dismiss()
+                        binding.ivCoverPhoto.setImageResource(R.drawable.ic_add_photo)
+                        binding.btnDeleteCoverPhoto.visibility = android.view.View.GONE
+                        binding.btnSetCoverPhoto.text = "Set Cover Photo"
+                        coverPhotoUrl = null
+                        Toast.makeText(this, "Cover photo deleted successfully", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .addOnFailureListener {
+                    progressDialog.dismiss()
+                    Toast.makeText(this, "Failed to delete cover photo", Toast.LENGTH_SHORT).show()
+                }
         }
 
         // Save/Update Button
@@ -156,24 +223,84 @@ class SellerAccountActivity : AppCompatActivity(), OnMapReadyCallback {
         val userId = auth.currentUser?.uid ?: return
         val shopName = binding.etShopName.text.toString().trim()
         val shopDescription = binding.etShopDescription.text.toString().trim()
+        
+        progressDialog.setMessage("Updating profile...")
+        progressDialog.show()
+
         val data = hashMapOf<String, Any>(
             "shopName" to shopName,
             "shopDescription" to shopDescription
         )
+
+        // Only update cover photo if it's a new one
+        if (coverPhotoUri != null) {
+            saveCoverPhoto()
+        }
+
+        updateProfileData(userId, data)
+    }
+
+    private fun updateProfileData(userId: String, data: Map<String, Any>) {
         db.collection("sellers").document(userId)
-            .update(data as Map<String, Any>)
+            .update(data)
             .addOnSuccessListener {
+                progressDialog.dismiss()
                 Toast.makeText(this, "Shop profile updated", Toast.LENGTH_SHORT).show()
             }
-            .addOnFailureListener {
-                Toast.makeText(this, "Failed to update profile", Toast.LENGTH_SHORT).show()
+            .addOnFailureListener { e ->
+                progressDialog.dismiss()
+                Log.e("SellerAccount", "Failed to update profile: ${e.message}")
+                Toast.makeText(this, "Failed to update profile: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun saveCoverPhoto() {
+        val userId = auth.currentUser?.uid ?: return
+        if (coverPhotoUri == null) return
+
+        progressDialog.setMessage("Uploading cover photo...")
+        progressDialog.show()
+
+        val storageRef = FirebaseStorage.getInstance().reference
+            .child("shop_covers")
+            .child(userId)
+            .child("cover_${System.currentTimeMillis()}.jpg")
+
+        storageRef.putFile(coverPhotoUri!!)
+            .addOnSuccessListener {
+                storageRef.downloadUrl.addOnSuccessListener { uri ->
+                    // Update Firestore with new cover photo URL
+                    db.collection("sellers").document(userId)
+                        .update("coverPhotoUrl", uri.toString())
+                        .addOnSuccessListener {
+                            progressDialog.dismiss()
+                            coverPhotoUrl = uri.toString()
+                            binding.btnDeleteCoverPhoto.visibility = android.view.View.VISIBLE
+                            binding.btnSetCoverPhoto.text = "Change Cover Photo"
+                            Toast.makeText(this, "Cover photo has been set successfully!", Toast.LENGTH_LONG).show()
+                        }
+                        .addOnFailureListener { e ->
+                            progressDialog.dismiss()
+                            Log.e("SellerAccount", "Failed to update cover photo URL: ${e.message}")
+                            Toast.makeText(this, "Failed to save cover photo: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                }
+            }
+            .addOnFailureListener { e ->
+                progressDialog.dismiss()
+                Log.e("SellerAccount", "Failed to upload cover photo: ${e.message}")
+                Toast.makeText(this, "Failed to upload cover photo: ${e.message}", Toast.LENGTH_SHORT).show()
             }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        // Handle result from Maps activity
-        if (requestCode == 200 && resultCode == Activity.RESULT_OK && data != null) {
+        if (requestCode == PICK_COVER_PHOTO_REQUEST && resultCode == Activity.RESULT_OK && data != null) {
+            coverPhotoUri = data.data
+            binding.ivCoverPhoto.setImageURI(coverPhotoUri)
+            // Save cover photo immediately when selected
+            saveCoverPhoto()
+        } else if (requestCode == 200 && resultCode == Activity.RESULT_OK && data != null) {
             val lat = data.getDoubleExtra("latitude", 0.0)
             val lng = data.getDoubleExtra("longitude", 0.0)
             val locationName = data.getStringExtra("locationName") ?: ""

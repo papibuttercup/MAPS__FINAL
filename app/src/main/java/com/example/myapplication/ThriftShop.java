@@ -5,7 +5,7 @@ public class ThriftShop {
     private String name;
     private String type;
     private String location;
-    private String coverPhotoUri;
+    private String coverPhotoUrl;
     private double latitude;
     private double longitude;
     private String description;
@@ -14,13 +14,13 @@ public class ThriftShop {
         // Required empty constructor for Firestore
     }
 
-    public ThriftShop(String id, String name, String type, String location, String coverPhotoUri, 
+    public ThriftShop(String id, String name, String type, String location, String coverPhotoUrl, 
                      double latitude, double longitude, String description) {
         this.id = id;
         this.name = name;
         this.type = type;
         this.location = location;
-        this.coverPhotoUri = coverPhotoUri;
+        this.coverPhotoUrl = coverPhotoUrl;
         this.latitude = latitude;
         this.longitude = longitude;
         this.description = description;
@@ -39,8 +39,8 @@ public class ThriftShop {
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
 
-    public String getCoverPhotoUri() { return coverPhotoUri; }
-    public void setCoverPhotoUri(String coverPhotoUri) { this.coverPhotoUri = coverPhotoUri; }
+    public String getCoverPhotoUri() { return coverPhotoUrl; }
+    public void setCoverPhotoUri(String coverPhotoUrl) { this.coverPhotoUrl = coverPhotoUrl; }
 
     public double getLatitude() { return latitude; }
     public void setLatitude(double latitude) { this.latitude = latitude; }

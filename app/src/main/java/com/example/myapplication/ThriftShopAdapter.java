@@ -46,6 +46,8 @@ public class ThriftShopAdapter extends RecyclerView.Adapter<ThriftShopAdapter.Vi
             Glide.with(context)
                 .load(shop.getCoverPhotoUri())
                 .placeholder(R.drawable.ic_image_placeholder)
+                .error(R.drawable.ic_image_placeholder)
+                .centerCrop()
                 .into(holder.imgShopCover);
         } else {
             holder.imgShopCover.setImageResource(R.drawable.ic_image_placeholder);

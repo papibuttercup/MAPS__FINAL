@@ -63,7 +63,7 @@ public class HomeFragment extends Fragment implements ThriftShopAdapter.OnShopCl
                     } else {
                         shop.setLocation("");
                     }
-                    shop.setCoverPhotoUri(document.getString("coverPhotoUri"));
+                    shop.setCoverPhotoUri(document.getString("coverPhotoUrl"));
                     // Handle potential null values for coordinates
                     Double latitude = document.getDouble("latitude");
                     Double longitude = document.getDouble("longitude");
@@ -78,8 +78,13 @@ public class HomeFragment extends Fragment implements ThriftShopAdapter.OnShopCl
                     adapter.notifyDataSetChanged();
                 }
                 if (getContext() != null) {
-                    Toast.makeText(getContext(), "Loaded " + shopList.size() + " shops", 
-                                 Toast.LENGTH_SHORT).show();
+                    if (shopList.isEmpty()) {
+                        Toast.makeText(getContext(), "No thrift shops found in Baguio", 
+                                     Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(getContext(), "Found " + shopList.size() + " thrift shops in Baguio", 
+                                     Toast.LENGTH_SHORT).show();
+                    }
                 }
             })
             .addOnFailureListener(e -> {
