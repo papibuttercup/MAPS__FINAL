@@ -41,8 +41,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             if (itemId == R.id.navigation_for_you) {
                 // Already on For You tab
                 return true;
-            } else if (itemId == R.id.navigation_location) {
-                // Already on Location tab
+            } else if (itemId == R.id.navigation_home) {
+                finish(); // or navigate to home/main screen
                 return true;
             } else if (itemId == R.id.navigation_account) {
                 startActivity(new Intent(MapsActivity.this, AccountActivity.class));

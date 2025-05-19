@@ -15,17 +15,6 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/addMarkerFab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:src="@android:drawable/ic_input_add"
-        app:backgroundTint="@color/white"
-        app:tint="@color/primaryColor"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/gpsFab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -33,7 +22,7 @@
         android:src="@drawable/ic_gps_not_fixed"
         app:backgroundTint="@color/white"
         app:tint="@color/primaryColor"
-        app:layout_constraintBottom_toTopOf="@id/addMarkerFab"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginBottom="16dp" />
 

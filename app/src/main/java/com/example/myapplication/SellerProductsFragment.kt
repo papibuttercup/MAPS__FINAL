@@ -40,6 +40,18 @@ class SellerProductsFragment : Fragment() {
         adapter = ProductAdapter(productList)
         binding.rvProducts.layoutManager = GridLayoutManager(context, 2)
         binding.rvProducts.adapter = adapter
+        adapter.setOnEditProductListener(object : ProductAdapter.OnEditProductListener {
+            override fun onEditProduct(product: SellerProduct) {
+                val intent = Intent(requireContext(), ListNewItemActivity::class.java)
+                intent.putExtra("productId", product.id)
+                intent.putExtra("name", product.name)
+                intent.putExtra("price", product.price)
+                intent.putExtra("stock", product.stock)
+                intent.putExtra("coverPhotoUri", product.imageUrl)
+                // Add more extras as needed
+                startActivity(intent)
+            }
+        })
     }
 
     private fun setupButtons() {

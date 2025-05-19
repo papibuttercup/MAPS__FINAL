@@ -21,6 +21,14 @@ data class SellerProduct(
 class ProductAdapter(private val products: List<SellerProduct>) :
     RecyclerView.Adapter<ProductAdapter.ProductViewHolder>() {
 
+    interface OnEditProductListener {
+        fun onEditProduct(product: SellerProduct)
+    }
+    private var editListener: OnEditProductListener? = null
+    fun setOnEditProductListener(listener: OnEditProductListener) {
+        this.editListener = listener
+    }
+
     inner class ProductViewHolder(val binding: ItemProductBinding) : RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ProductViewHolder {
@@ -37,6 +45,9 @@ class ProductAdapter(private val products: List<SellerProduct>) :
             .load(product.imageUrl)
             .placeholder(R.drawable.placeholder_image)
             .into(holder.binding.imgProduct)
+        holder.binding.btnEditProduct.setOnClickListener {
+            editListener?.onEditProduct(product)
+        }
     }
 
     override fun getItemCount() = products.size

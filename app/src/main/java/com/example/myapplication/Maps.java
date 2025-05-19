@@ -8,6 +8,8 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
@@ -94,6 +96,11 @@ import androidx.cardview.widget.CardView;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 
+import android.animation.ValueAnimator;
+import android.view.inputmethod.InputMethodManager;
+
+import android.widget.ProgressBar;
+
 public class Maps extends AppCompatActivity implements OnMapReadyCallback {
     private static final int PERMISSIONS_REQUEST_LOCATION = 99;
     private static final String MARKERS_PREF = "saved_markers";
@@ -121,15 +128,14 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
     private BottomSheetDialog collapsedSheetDialog;
     private BottomNavigationView bottomNavigation;
 
-    private FloatingActionButton searchFab;
-    private FloatingActionButton addMarkerFab;
-    private CardView searchCard;
+    private CardView searchBar;
     private ImageView closeSearch;
 
     private LatLng selectedShopLatLng = null;
     private String selectedShopLocationName = null;
     private Marker shopMarker = null;
-    private Button confirmShopLocationButton;
+
+    private ProgressBar searchProgress;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -143,105 +149,66 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
         setContentView(rootView);
 
         mapView = findViewById(R.id.mapView);
+        bottomNavigation = findViewById(R.id.bottomNavigation);
+        searchBar = findViewById(R.id.searchBar);
         searchInput = findViewById(R.id.searchInput);
         searchIcon = findViewById(R.id.searchIcon);
-        bottomNavigation = findViewById(R.id.bottomNavigation);
-        searchFab = findViewById(R.id.searchFab);
-        addMarkerFab = findViewById(R.id.addMarkerFab);
-        searchCard = findViewById(R.id.searchCard);
         closeSearch = findViewById(R.id.closeSearch);
+        searchProgress = findViewById(R.id.searchProgress);
 
-        Log.d("Maps", "Bottom Navigation initialized: " + (bottomNavigation != null));
-        if (bottomNavigation == null) {
-            Log.e("Maps", "Bottom Navigation is null after findViewById");
-        }
+        // Initial state: collapsed
+        collapseSearchBar(false);
 
-        mapView.onCreate(savedInstanceState);
-        mapView.getMapAsync(this);
-
-        final LatLng[] selectedLatLng = {null};
-        searchIcon.setOnClickListener(v -> searchCard.setVisibility(View.VISIBLE));
-        searchFab.setOnClickListener(v -> searchCard.setVisibility(View.VISIBLE));
-        closeSearch.setOnClickListener(v -> searchCard.setVisibility(View.GONE));
-        addMarkerFab.setOnClickListener(v -> {
-            if (maplibreMap != null) {
-                Toast.makeText(this, "Tap on the map to set your shop location", Toast.LENGTH_SHORT).show();
-                MapLibreMap.OnMapClickListener[] tempListener = new MapLibreMap.OnMapClickListener[1];
-                tempListener[0] = point -> {
-                    // Prompt for shop name
-                    View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_edit_marker_name, null);
-                    EditText nameInput = dialogView.findViewById(R.id.markerNameInput);
-                    new AlertDialog.Builder(Maps.this)
-                        .setTitle("Set Shop Name")
-                        .setView(dialogView)
-                        .setPositiveButton("Save", (dialog, which) -> {
-                            String shopName = nameInput.getText().toString().trim();
-                            if (!shopName.isEmpty()) {
-                                addMarker(point.getLatitude(), point.getLongitude(), shopName);
-                            } else {
-                                Toast.makeText(this, "Shop name cannot be empty", Toast.LENGTH_SHORT).show();
-                            }
-                        })
-                        .setNegativeButton("Cancel", null)
-                        .show();
-                    maplibreMap.removeOnMapClickListener(tempListener[0]);
-                    return true;
-                };
-                maplibreMap.addOnMapClickListener(tempListener[0]);
-            }
+        searchIcon.setOnClickListener(v -> expandSearchBar());
+        closeSearch.setOnClickListener(v -> collapseSearchBar(true));
+        searchInput.setOnFocusChangeListener((v, hasFocus) -> {
+            if (!hasFocus) collapseSearchBar(true);
         });
 
-        setupBottomNavigation();
+        // Show/hide close icon based on text
+        searchInput.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                closeSearch.setVisibility(s.length() > 0 ? View.VISIBLE : View.GONE);
+            }
+            @Override
+            public void afterTextChanged(android.text.Editable s) {}
+        });
 
+        // Search on action
+        searchInput.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEARCH ||
+                actionId == EditorInfo.IME_ACTION_DONE ||
+                (event != null && event.getAction() == KeyEvent.ACTION_DOWN &&
+                 event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
+                performSearch();
+                return true;
+            }
+            return false;
+        });
+
+        // Set up autocomplete adapter
         httpClient = new OkHttpClient.Builder()
                 .connectTimeout(10, TimeUnit.SECONDS)
                 .readTimeout(10, TimeUnit.SECONDS)
                 .build();
-
-        GeocodingService geocodingService = new MapTilerGeocodingService(this);
         autocompleteAdapter = new AutocompleteAdapter(this, httpClient);
         searchInput.setAdapter(autocompleteAdapter);
         searchInput.setThreshold(1);
-
         searchInput.setOnItemClickListener((parent, view, position, id) -> {
             String selectedItem = (String) parent.getItemAtPosition(position);
             searchInput.setText(selectedItem);
             performSearch();
         });
 
-        searchInput.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId == EditorInfo.IME_ACTION_SEARCH ||
-                        actionId == EditorInfo.IME_ACTION_DONE ||
-                        (event != null && event.getAction() == KeyEvent.ACTION_DOWN &&
-                                event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
-                    performSearch();
-                    return true;
-                }
-                return false;
-            }
-        });
+        searchInput.setDropDownAnchor(R.id.searchBar);
+        searchInput.setDropDownWidth(searchBar.getWidth());
 
-        searchCard.setVisibility(View.GONE);
-
-        // Add confirm button for shop location
-        confirmShopLocationButton = new Button(this);
-        confirmShopLocationButton.setText("Set This Location");
-        confirmShopLocationButton.setVisibility(View.GONE);
-        ((ViewGroup) mapView.getParent()).addView(confirmShopLocationButton);
-        confirmShopLocationButton.setOnClickListener(v -> {
-            if (selectedShopLatLng != null && selectedShopLocationName != null) {
-                Intent result = new Intent();
-                result.putExtra("latitude", selectedShopLatLng.getLatitude());
-                result.putExtra("longitude", selectedShopLatLng.getLongitude());
-                result.putExtra("locationName", selectedShopLocationName);
-                setResult(RESULT_OK, result);
-                finish();
-            } else {
-                Toast.makeText(this, "Please tap on the map to set your shop location", Toast.LENGTH_SHORT).show();
-            }
-        });
+        mapView.onCreate(savedInstanceState);
+        mapView.getMapAsync(this);
+        setupBottomNavigation();
 
         // Handle intent for shop location selection
         Intent intent = getIntent();
@@ -251,30 +218,56 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
             mapView.getMapAsync(mapLibreMap -> {
                 mapLibreMap.moveCamera(CameraUpdateFactory.newLatLngZoom(center, 15f));
                 Toast.makeText(this, "Tap on the map to set your shop location, then click 'Set This Location'", Toast.LENGTH_LONG).show();
-                confirmShopLocationButton.setVisibility(View.VISIBLE);
                 // Only allow tap-to-place-marker, no marker click listeners
                 mapLibreMap.addOnMapClickListener(point -> {
                     selectedShopLatLng = point;
                     if (shopMarker != null) mapLibreMap.removeMarker(shopMarker);
                     shopMarker = mapLibreMap.addMarker(new MarkerOptions().position(point).title(selectedShopLocationName));
+                    new AlertDialog.Builder(Maps.this)
+                        .setTitle("Set This Location?")
+                        .setMessage("Do you want to set this as your shop location?")
+                        .setPositiveButton("Yes", (dialog, which) -> {
+                            if (selectedShopLatLng != null && selectedShopLocationName != null) {
+                                Intent result = new Intent();
+                                result.putExtra("latitude", selectedShopLatLng.getLatitude());
+                                result.putExtra("longitude", selectedShopLatLng.getLongitude());
+                                result.putExtra("locationName", selectedShopLocationName);
+                                setResult(RESULT_OK, result);
+                                finish();
+                            }
+                        })
+                        .setNegativeButton("No", (dialog, which) -> {
+                            if (shopMarker != null) mapLibreMap.removeMarker(shopMarker);
+                            selectedShopLatLng = null;
+                        })
+                        .show();
                     return true;
-                });
-                // Do NOT set any OnMarkerClickListener in this mode
-                confirmShopLocationButton.setOnClickListener(v -> {
-                    if (selectedShopLatLng != null && selectedShopLocationName != null) {
-                        Intent result = new Intent();
-                        result.putExtra("latitude", selectedShopLatLng.getLatitude());
-                        result.putExtra("longitude", selectedShopLatLng.getLongitude());
-                        result.putExtra("locationName", selectedShopLocationName);
-                        setResult(RESULT_OK, result);
-                        finish();
-                    } else {
-                        Toast.makeText(this, "Please tap on the map to set your shop location", Toast.LENGTH_SHORT).show();
-                    }
                 });
             });
             return;
         }
+
+        final Handler debounceHandler = new Handler(Looper.getMainLooper());
+        final int DEBOUNCE_DELAY = 300;
+        searchInput.addTextChangedListener(new android.text.TextWatcher() {
+            private Runnable debounceRunnable;
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (debounceRunnable != null) debounceHandler.removeCallbacks(debounceRunnable);
+                searchProgress.setVisibility(View.VISIBLE);
+                debounceRunnable = () -> autocompleteAdapter.getFilter().filter(s);
+                debounceHandler.postDelayed(debounceRunnable, DEBOUNCE_DELAY);
+            }
+            @Override
+            public void afterTextChanged(android.text.Editable s) {}
+        });
+    }
+
+    // Utility method for dp to px
+    private int dpToPx(int dp) {
+        return (int) (dp * getResources().getDisplayMetrics().density);
     }
 
     private void checkSellerVerification() {
@@ -316,6 +309,7 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
     private class AutocompleteAdapter extends ArrayAdapter<String> implements Filterable {
         private List<String> suggestions;
         private final OkHttpClient httpClient;
+        private boolean lastHadError = false;
 
         public AutocompleteAdapter(Context context, OkHttpClient httpClient) {
             super(context, android.R.layout.simple_dropdown_item_1line);
@@ -341,10 +335,13 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
                 @Override
                 protected FilterResults performFiltering(CharSequence constraint) {
                     FilterResults results = new FilterResults();
-                    if (constraint != null) {
+                    if (constraint != null && constraint.length() > 0) {
                         List<String> newSuggestions = fetchSuggestions(constraint.toString());
                         results.values = newSuggestions;
                         results.count = newSuggestions.size();
+                    } else {
+                        results.values = new ArrayList<String>();
+                        results.count = 0;
                     }
                     return results;
                 }
@@ -352,13 +349,22 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
                 @Override
                 @SuppressWarnings("unchecked")
                 protected void publishResults(CharSequence constraint, FilterResults results) {
-                    if (results != null && results.count > 0) {
-                        suggestions.clear();
-                        suggestions.addAll((List<String>) results.values);
-                        notifyDataSetChanged();
+                    searchProgress.setVisibility(View.GONE);
+                    suggestions.clear();
+                    if (results != null && results.values != null) {
+                        List<String> newSuggestions = (List<String>) results.values;
+                        if (lastHadError) {
+                            suggestions.add("Network error");
+                            lastHadError = false;
+                        } else if (newSuggestions.isEmpty()) {
+                            suggestions.add("No results found");
+                        } else {
+                            suggestions.addAll(newSuggestions);
+                        }
                     } else {
-                        notifyDataSetInvalidated();
+                        suggestions.add("No results found");
                     }
+                    notifyDataSetChanged();
                 }
             };
         }
@@ -367,16 +373,13 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
             List<String> newSuggestions = new ArrayList<>();
             String apiKey = BuildConfig.MAPTILER_API_KEY;
             String url = "https://api.maptiler.com/geocoding/" + query + ".json?key=" + apiKey + "&limit=5&autocomplete=true";
-
             Request request = new Request.Builder().url(url).build();
-
             try {
                 Response response = httpClient.newCall(request).execute();
                 if (response.isSuccessful() && response.body() != null) {
                     String responseBody = response.body().string();
                     JsonObject jsonObject = new Gson().fromJson(responseBody, JsonObject.class);
                     JsonArray features = jsonObject.getAsJsonArray("features");
-
                     if (features != null) {
                         for (int i = 0; i < features.size(); i++) {
                             JsonObject feature = features.get(i).getAsJsonObject();
@@ -384,9 +387,12 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
                             newSuggestions.add(placeName);
                         }
                     }
+                } else {
+                    lastHadError = true;
                 }
             } catch (IOException e) {
                 Log.e("Autocomplete", "Error fetching suggestions", e);
+                lastHadError = true;
             }
             return newSuggestions;
         }
@@ -560,57 +566,15 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
                     JsonArray coordinates = firstResult.getAsJsonObject("geometry").getAsJsonArray("coordinates");
                     double longitude = coordinates.get(0).getAsDouble();
                     double latitude = coordinates.get(1).getAsDouble();
-                    
-                    JsonObject properties = firstResult.getAsJsonObject("properties");
-                    final String locationName = properties != null && properties.has("place_name") 
-                        ? properties.get("place_name").getAsString() 
-                        : "Unknown Location";
-                    final double finalLatitude = latitude;
-                    final double finalLongitude = longitude;
 
                     runOnUiThread(() -> {
-                        // Remove existing marker if any
-                        if (shopMarker != null) {
-                            maplibreMap.removeMarker(shopMarker);
-                        }
-
-                        // Add new marker
-                        LatLng location = new LatLng(finalLatitude, finalLongitude);
-                        shopMarker = maplibreMap.addMarker(new MarkerOptions()
-                                .position(location)
-                                .title("Shop Location")
-                                .snippet(locationName));
-
-                        // Move camera to location
+                        // Move camera to location only
+                        LatLng location = new LatLng(latitude, longitude);
                         maplibreMap.setCameraPosition(new CameraPosition.Builder()
                                 .target(location)
                                 .zoom(15.0)
                                 .build());
-
-                        // Show confirmation dialog
-                        new AlertDialog.Builder(Maps.this)
-                                .setTitle("Confirm Location")
-                                .setMessage("Is this the correct location for your shop?")
-                                .setPositiveButton("Confirm", (dialog, which) -> {
-                                    selectedShopLatLng = location;
-                                    selectedShopLocationName = locationName;
-                                    // Save the location to Firestore
-                                    saveMarkerToFirestore(finalLatitude, finalLongitude, locationName);
-                                    // Hide search card
-                                    searchCard.setVisibility(View.GONE);
-                                    // Clear search input
-                                    searchInput.setText("");
-                                })
-                                .setNegativeButton("Cancel", (dialog, which) -> {
-                                    // Remove the marker
-                                    if (shopMarker != null) {
-                                        maplibreMap.removeMarker(shopMarker);
-                                        shopMarker = null;
-                                    }
-                                    selectedShopLatLng = null;
-                                    selectedShopLocationName = null;
-                                })
-                                .show();
+                        searchInput.setText("");
                     });
                 } else {
                     runOnUiThread(() -> Toast.makeText(Maps.this, "No results found", Toast.LENGTH_SHORT).show());
@@ -950,10 +914,8 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
                 Log.d("Maps", "Navigation item selected: " + itemId);
                 if (itemId == R.id.navigation_for_you) {
                     return true;
-                } else if (itemId == R.id.navigation_location) {
-                    if (checkLocationPermission()) {
-                        zoomToUserLocation();
-                    }
+                } else if (itemId == R.id.navigation_home) {
+                    finish();
                     return true;
                 } else if (itemId == R.id.navigation_account) {
                     startActivity(new Intent(Maps.this, AccountActivity.class));
@@ -978,5 +940,45 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
                 );
             }
         }
+    }
+
+    private void expandSearchBar() {
+        int targetWidth = ViewGroup.LayoutParams.MATCH_PARENT;
+        ValueAnimator animator = ValueAnimator.ofInt(searchBar.getWidth(), dpToPx(320));
+        animator.setDuration(250);
+        animator.addUpdateListener(animation -> {
+            int val = (Integer) animation.getAnimatedValue();
+            ViewGroup.LayoutParams layoutParams = searchBar.getLayoutParams();
+            layoutParams.width = val;
+            searchBar.setLayoutParams(layoutParams);
+            searchInput.setDropDownWidth(val);
+        });
+        animator.start();
+        searchInput.setVisibility(View.VISIBLE);
+        closeSearch.setVisibility(searchInput.getText().length() > 0 ? View.VISIBLE : View.GONE);
+        searchInput.requestFocus();
+        searchInput.post(() -> {
+            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) imm.showSoftInput(searchInput, InputMethodManager.SHOW_IMPLICIT);
+        });
+    }
+
+    private void collapseSearchBar(boolean clearText) {
+        ValueAnimator animator = ValueAnimator.ofInt(searchBar.getWidth(), dpToPx(48));
+        animator.setDuration(250);
+        animator.addUpdateListener(animation -> {
+            int val = (Integer) animation.getAnimatedValue();
+            ViewGroup.LayoutParams layoutParams = searchBar.getLayoutParams();
+            layoutParams.width = val;
+            searchBar.setLayoutParams(layoutParams);
+            searchInput.setDropDownWidth(val);
+        });
+        animator.start();
+        searchInput.setVisibility(View.GONE);
+        closeSearch.setVisibility(View.GONE);
+        if (clearText) searchInput.setText("");
+        searchBar.requestFocus();
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) imm.hideSoftInputFromWindow(searchBar.getWindowToken(), 0);
     }
 }

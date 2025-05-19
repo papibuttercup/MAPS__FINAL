@@ -42,6 +42,9 @@ public class ListNewItemActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private Uri coverPhotoUri;
     private String selectedMainCategory = "", selectedCategory = "";
+    private String editingProductId = null;
+    private String editingCoverPhotoUri = null;
+    private ArrayList<String> editingProductImageUris = new ArrayList<>();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -67,32 +70,64 @@ public class ListNewItemActivity extends AppCompatActivity {
 
         setupCategorySpinners();
 
-        btnAddCoverPhoto.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent();
-                intent.setType("image/*");
-                intent.setAction(Intent.ACTION_GET_CONTENT);
-                startActivityForResult(Intent.createChooser(intent, "Select Cover Photo"), PICK_COVER_PHOTO_REQUEST);
+        Intent intent = getIntent();
+        if (intent.hasExtra("productId")) {
+            editingProductId = intent.getStringExtra("productId");
+            etName.setText(intent.getStringExtra("name"));
+            etPrice.setText(String.valueOf(intent.getDoubleExtra("price", 0)));
+            etStock.setText(String.valueOf(intent.getIntExtra("stock", 0)));
+            etDescription.setText(intent.getStringExtra("description"));
+            etWeight.setText(String.valueOf(intent.getDoubleExtra("weight", 0)));
+            etParcelSize.setText(intent.getStringExtra("parcelSize"));
+            editingCoverPhotoUri = intent.getStringExtra("coverPhotoUri");
+            if (editingCoverPhotoUri != null && !editingCoverPhotoUri.isEmpty()) {
+                imgCoverPreview.setVisibility(View.VISIBLE);
+                imgCoverPreview.setImageURI(Uri.parse(editingCoverPhotoUri));
             }
-        });
-        btnAddImages.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent();
-                intent.setType("image/*");
-                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-                intent.setAction(Intent.ACTION_GET_CONTENT);
-                startActivityForResult(Intent.createChooser(intent, "Select Product Images (up to 8)"), PICK_IMAGES_REQUEST);
+            ArrayList<String> imgUris = intent.getStringArrayListExtra("productImageUris");
+            if (imgUris != null) {
+                editingProductImageUris = imgUris;
+                for (String uri : imgUris) {
+                    addImagePreview(Uri.parse(uri));
+                }
             }
-        });
+            // Set category spinners (optional: you may want to select the right items)
+            // ...
+            btnAddProduct.setText("Update Product");
+            btnAddProduct.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    updateProductInFirestore(editingProductId);
+                }
+            });
+        } else {
+            btnAddCoverPhoto.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Intent intent = new Intent();
+                    intent.setType("image/*");
+                    intent.setAction(Intent.ACTION_GET_CONTENT);
+                    startActivityForResult(Intent.createChooser(intent, "Select Cover Photo"), PICK_COVER_PHOTO_REQUEST);
+                }
+            });
+            btnAddImages.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Intent intent = new Intent();
+                    intent.setType("image/*");
+                    intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                    intent.setAction(Intent.ACTION_GET_CONTENT);
+                    startActivityForResult(Intent.createChooser(intent, "Select Product Images (up to 8)"), PICK_IMAGES_REQUEST);
+                }
+            });
 
-        btnAddProduct.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                addProductToFirestore();
-            }
-        });
+            btnAddProduct.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    addProductToFirestore();
+                }
+            });
+        }
     }
 
     private void setupCategorySpinners() {
@@ -306,6 +341,43 @@ public class ListNewItemActivity extends AppCompatActivity {
             .addOnFailureListener(e -> {
                 progressDialog.dismiss();
                 Toast.makeText(this, "Failed to add product: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            });
+    }
+
+    private void updateProductInFirestore(String productId) {
+        String name = etName.getText().toString().trim();
+        String description = etDescription.getText().toString().trim();
+        String priceStr = etPrice.getText().toString().trim();
+        String stockStr = etStock.getText().toString().trim();
+        String weightStr = etWeight.getText().toString().trim();
+        String parcelSize = etParcelSize.getText().toString().trim();
+        double price;
+        int stock;
+        double weight;
+        try {
+            price = Double.parseDouble(priceStr);
+            stock = Integer.parseInt(stockStr);
+            weight = Double.parseDouble(weightStr);
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Invalid price, stock, or weight", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("name", name);
+        updates.put("description", description);
+        updates.put("price", price);
+        updates.put("stock", stock);
+        updates.put("weight", weight);
+        updates.put("parcelSize", parcelSize);
+        // Optionally update images and categories if you want
+        db.collection("products").document(productId)
+            .update(updates)
+            .addOnSuccessListener(aVoid -> {
+                Toast.makeText(this, "Product updated successfully!", Toast.LENGTH_SHORT).show();
+                finish();
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(this, "Failed to update product: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             });
     }
 } 

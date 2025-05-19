@@ -47,7 +47,6 @@ public class SellerMapFragment extends Fragment implements OnMapReadyCallback {
     private MapView mapView;
     private MapLibreMap maplibreMap;
     private LocationComponent locationComponent;
-    private FloatingActionButton addMarkerFab;
     private FloatingActionButton gpsFab;
     private boolean isTracking = false;
     private FirebaseFirestore db;
@@ -61,18 +60,10 @@ public class SellerMapFragment extends Fragment implements OnMapReadyCallback {
         auth = FirebaseAuth.getInstance();
 
         mapView = view.findViewById(R.id.mapView);
-        addMarkerFab = view.findViewById(R.id.addMarkerFab);
         gpsFab = view.findViewById(R.id.gpsFab);
 
         mapView.onCreate(savedInstanceState);
         mapView.getMapAsync(this);
-
-        addMarkerFab.setOnClickListener(v -> {
-            if (maplibreMap != null) {
-                LatLng center = maplibreMap.getCameraPosition().target;
-                addMarker(center.getLatitude(), center.getLongitude(), "My Shop Location");
-            }
-        });
 
         gpsFab.setOnClickListener(v -> {
             if (checkLocationPermission()) {
@@ -113,6 +104,16 @@ public class SellerMapFragment extends Fragment implements OnMapReadyCallback {
             if (checkLocationPermission()) {
                 zoomToUserLocation();
             }
+
+            maplibreMap.addOnMapClickListener(point -> {
+                new AlertDialog.Builder(requireContext())
+                    .setTitle("Set This Location?")
+                    .setMessage("Do you want to set this as your shop location?")
+                    .setPositiveButton("Yes", (dialog, which) -> addMarker(point.getLatitude(), point.getLongitude(), "My Shop Location"))
+                    .setNegativeButton("No", null)
+                    .show();
+                return true;
+            });
         });
     }
 

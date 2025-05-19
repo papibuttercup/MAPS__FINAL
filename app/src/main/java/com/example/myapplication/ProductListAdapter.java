@@ -9,6 +9,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.ImageButton;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
@@ -17,6 +18,15 @@ import com.bumptech.glide.Glide;
 public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.ViewHolder> {
     private List<Product> products;
     private Context context;
+    private OnEditProductListener editListener;
+
+    public interface OnEditProductListener {
+        void onEditProduct(Product product);
+    }
+
+    public void setOnEditProductListener(OnEditProductListener listener) {
+        this.editListener = listener;
+    }
 
     public ProductListAdapter(Context context, List<Product> products) {
         this.context = context;
@@ -50,7 +60,11 @@ public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.
         }
         holder.txtProductName.setText(product.name);
         holder.txtProductPrice.setText("₱" + product.price);
-        holder.colorDots.removeAllViews(); // No color dots in new model
+        if (holder.btnEditProduct != null) {
+            holder.btnEditProduct.setOnClickListener(v -> {
+                if (editListener != null) editListener.onEditProduct(product);
+            });
+        }
     }
 
     @Override
@@ -61,13 +75,13 @@ public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.
     public static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView imgProduct;
         TextView txtProductName, txtProductPrice;
-        LinearLayout colorDots;
+        ImageButton btnEditProduct;
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             imgProduct = itemView.findViewById(R.id.imgProduct);
             txtProductName = itemView.findViewById(R.id.txtProductName);
             txtProductPrice = itemView.findViewById(R.id.txtProductPrice);
-            colorDots = itemView.findViewById(R.id.colorDots);
+            btnEditProduct = itemView.findViewById(R.id.btnEditProduct);
         }
     }
 } 
