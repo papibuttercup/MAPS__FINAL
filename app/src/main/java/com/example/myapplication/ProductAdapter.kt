@@ -18,7 +18,7 @@ data class SellerProduct(
     val status: String = ""
 )
 
-class ProductAdapter(private val products: List<SellerProduct>) :
+class ProductAdapter(private val products: List<SellerProduct>, private val isSeller: Boolean = false) :
     RecyclerView.Adapter<ProductAdapter.ProductViewHolder>() {
 
     interface OnEditProductListener {
@@ -45,8 +45,13 @@ class ProductAdapter(private val products: List<SellerProduct>) :
             .load(product.imageUrl)
             .placeholder(R.drawable.placeholder_image)
             .into(holder.binding.imgProduct)
-        holder.binding.btnEditProduct.setOnClickListener {
-            editListener?.onEditProduct(product)
+        if (isSeller) {
+            holder.binding.btnEditProduct.visibility = android.view.View.VISIBLE
+            holder.binding.btnEditProduct.setOnClickListener {
+                editListener?.onEditProduct(product)
+            }
+        } else {
+            holder.binding.btnEditProduct.visibility = android.view.View.GONE
         }
     }
 

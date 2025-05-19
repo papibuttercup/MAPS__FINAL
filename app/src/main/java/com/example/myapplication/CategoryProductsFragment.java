@@ -43,7 +43,7 @@ public class CategoryProductsFragment extends Fragment {
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         
         productList = new ArrayList<>();
-        adapter = new ProductAdapter(productList);
+        adapter = new ProductAdapter(productList, false);
         recyclerView.setAdapter(adapter);
         
         // TODO: Load products for the selected category

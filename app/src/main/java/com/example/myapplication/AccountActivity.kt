@@ -37,10 +37,11 @@ class AccountActivity : AppCompatActivity() {
             finish()
         }
 
-        binding.editProfileButton.setOnClickListener {
-            val intent = Intent(this, EditProfileActivity::class.java)
-            startActivity(intent)
-        }
+        // Remove or comment out references to editProfileButton since the button was removed from the layout
+        // binding.editProfileButton.setOnClickListener {
+        //     val intent = Intent(this, EditProfileActivity::class.java)
+        //     startActivity(intent)
+        // }
 
         binding.settingsButton.setOnClickListener {
             val intent = Intent(this, SettingsActivity::class.java)

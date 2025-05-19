@@ -711,7 +711,7 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
                 } else {
                     recyclerView.setVisibility(View.VISIBLE);
                     emptyView.setVisibility(View.GONE);
-                    ProductAdapter adapter = new ProductAdapter(products);
+                    ProductAdapter adapter = new ProductAdapter(products, false);
                     recyclerView.setAdapter(adapter);
                 }
             })
@@ -755,9 +755,11 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
 
     private class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductViewHolder> {
         private final List<Product> products;
+        private final boolean isSeller;
 
-        ProductAdapter(List<Product> products) {
+        ProductAdapter(List<Product> products, boolean isSeller) {
             this.products = products;
+            this.isSeller = isSeller;
         }
 
         @NonNull
@@ -791,6 +793,11 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
                     .into(holder.productImage);
             } else {
                 holder.productImage.setImageResource(R.drawable.placeholder_image);
+            }
+            // Hide the edit pen for customers
+            android.widget.ImageButton editButton = holder.itemView.findViewById(R.id.btnEditProduct);
+            if (editButton != null) {
+                editButton.setVisibility(android.view.View.GONE);
             }
         }
 

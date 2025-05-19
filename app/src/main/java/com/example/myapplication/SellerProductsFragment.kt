@@ -37,7 +37,7 @@ class SellerProductsFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        adapter = ProductAdapter(productList)
+        adapter = ProductAdapter(productList, true)
         binding.rvProducts.layoutManager = GridLayoutManager(context, 2)
         binding.rvProducts.adapter = adapter
         adapter.setOnEditProductListener(object : ProductAdapter.OnEditProductListener {

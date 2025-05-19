@@ -61,9 +61,7 @@ public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.
         holder.txtProductName.setText(product.name);
         holder.txtProductPrice.setText("₱" + product.price);
         if (holder.btnEditProduct != null) {
-            holder.btnEditProduct.setOnClickListener(v -> {
-                if (editListener != null) editListener.onEditProduct(product);
-            });
+            holder.btnEditProduct.setVisibility(View.GONE);
         }
     }
 
