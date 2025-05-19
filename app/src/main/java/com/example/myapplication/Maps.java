@@ -531,50 +531,89 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
     }
 
     private void searchLocation(String address) {
-        String apiKey = BuildConfig.MAPTILER_API_KEY;
-        String encodedAddress;
-        try {
-            encodedAddress = URLEncoder.encode(address, "UTF-8");
-        } catch (Exception e) {
-            showToast("Error processing address");
-            return;
-        }
+        String encodedAddress = URLEncoder.encode(address);
+        String url = "https://api.maptiler.com/geocoding/" + encodedAddress + ".json?key=" + getString(R.string.maptiler_api_key);
 
-        String url = "https://api.maptiler.com/geocoding/" + encodedAddress + ".json?key=" + apiKey + "&limit=1";
-
-        Request request = new Request.Builder().url(url).build();
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
 
         httpClient.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                runOnUiThread(() -> showToast("Error searching for location"));
+                runOnUiThread(() -> Toast.makeText(Maps.this, "Error searching location: " + e.getMessage(), Toast.LENGTH_SHORT).show());
             }
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 if (!response.isSuccessful()) {
-                    runOnUiThread(() -> showToast("Location not found"));
+                    runOnUiThread(() -> Toast.makeText(Maps.this, "Error searching location", Toast.LENGTH_SHORT).show());
                     return;
                 }
 
-                String responseBody = response.body().string();
-                JsonObject jsonObject = new Gson().fromJson(responseBody, JsonObject.class);
-                JsonArray features = jsonObject.getAsJsonArray("features");
+                String responseData = response.body().string();
+                JsonObject jsonResponse = new Gson().fromJson(responseData, JsonObject.class);
+                JsonArray features = jsonResponse.getAsJsonArray("features");
 
-                if (features.size() > 0) {
-                    JsonObject feature = features.get(0).getAsJsonObject();
-                    JsonArray center = feature.getAsJsonArray("center");
-                    double longitude = center.get(0).getAsDouble();
-                    double latitude = center.get(1).getAsDouble();
-                    String placeName = feature.get("place_name").getAsString();
+                if (features != null && features.size() > 0) {
+                    JsonObject firstResult = features.get(0).getAsJsonObject();
+                    JsonArray coordinates = firstResult.getAsJsonObject("geometry").getAsJsonArray("coordinates");
+                    double longitude = coordinates.get(0).getAsDouble();
+                    double latitude = coordinates.get(1).getAsDouble();
+                    
+                    JsonObject properties = firstResult.getAsJsonObject("properties");
+                    final String locationName = properties != null && properties.has("place_name") 
+                        ? properties.get("place_name").getAsString() 
+                        : "Unknown Location";
+                    final double finalLatitude = latitude;
+                    final double finalLongitude = longitude;
 
                     runOnUiThread(() -> {
-                        addMarker(latitude, longitude, placeName);
-                        maplibreMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
-                                new LatLng(latitude, longitude), 15));
+                        // Remove existing marker if any
+                        if (shopMarker != null) {
+                            maplibreMap.removeMarker(shopMarker);
+                        }
+
+                        // Add new marker
+                        LatLng location = new LatLng(finalLatitude, finalLongitude);
+                        shopMarker = maplibreMap.addMarker(new MarkerOptions()
+                                .position(location)
+                                .title("Shop Location")
+                                .snippet(locationName));
+
+                        // Move camera to location
+                        maplibreMap.setCameraPosition(new CameraPosition.Builder()
+                                .target(location)
+                                .zoom(15.0)
+                                .build());
+
+                        // Show confirmation dialog
+                        new AlertDialog.Builder(Maps.this)
+                                .setTitle("Confirm Location")
+                                .setMessage("Is this the correct location for your shop?")
+                                .setPositiveButton("Confirm", (dialog, which) -> {
+                                    selectedShopLatLng = location;
+                                    selectedShopLocationName = locationName;
+                                    // Save the location to Firestore
+                                    saveMarkerToFirestore(finalLatitude, finalLongitude, locationName);
+                                    // Hide search card
+                                    searchCard.setVisibility(View.GONE);
+                                    // Clear search input
+                                    searchInput.setText("");
+                                })
+                                .setNegativeButton("Cancel", (dialog, which) -> {
+                                    // Remove the marker
+                                    if (shopMarker != null) {
+                                        maplibreMap.removeMarker(shopMarker);
+                                        shopMarker = null;
+                                    }
+                                    selectedShopLatLng = null;
+                                    selectedShopLocationName = null;
+                                })
+                                .show();
                     });
                 } else {
-                    runOnUiThread(() -> showToast("Location not found"));
+                    runOnUiThread(() -> Toast.makeText(Maps.this, "No results found", Toast.LENGTH_SHORT).show());
                 }
             }
         });

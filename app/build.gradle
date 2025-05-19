@@ -35,6 +35,10 @@ android {
         jvmTarget = '11'
     }
 
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << "-Xlint:deprecation"
+    }
+
     buildFeatures {
         buildConfig = true
         viewBinding true

@@ -1,5 +1,6 @@
 package com.example.myapplication;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -108,8 +109,16 @@ public class HomeFragment extends Fragment implements ThriftShopAdapter.OnShopCl
 
     @Override
     public void onViewLocation(ThriftShop shop) {
-        // TODO: Navigate to map with shop location
-        Toast.makeText(getContext(), "Viewing location of: " + shop.getName(), 
-                     Toast.LENGTH_SHORT).show();
+        // Check if shop has location set
+        if (shop.getLatitude() == 0.0 && shop.getLongitude() == 0.0) {
+            Toast.makeText(getContext(), "This shop has not set their location yet", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // Launch ShopLocationActivity
+        Intent intent = new Intent(getActivity(), ShopLocationActivity.class);
+        intent.putExtra("sellerId", shop.getId());
+        intent.putExtra("shopName", shop.getName());
+        startActivity(intent);
     }
 } 

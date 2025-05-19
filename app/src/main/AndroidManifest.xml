@@ -127,5 +127,9 @@
         <activity
             android:name=".ListedItemsActivity1"
             android:exported="false" />
+
+        <activity
+            android:name=".ShopLocationActivity"
+            android:exported="false" />
     </application>
 </manifest>

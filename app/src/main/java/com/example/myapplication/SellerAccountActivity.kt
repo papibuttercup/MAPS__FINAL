@@ -1,54 +1,47 @@
 package com.example.myapplication
 
 import android.app.Activity
-import android.app.ProgressDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.Glide
 import com.example.myapplication.databinding.ActivitySellerAccountBinding
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
-import androidx.fragment.app.FragmentManager
-import com.google.android.gms.maps.SupportMapFragment
+import org.maplibre.android.MapLibre
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
-import org.maplibre.android.geometry.LatLng as MLLatLng
-import org.maplibre.android.annotations.MarkerOptions as MLMarkerOptions
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.annotations.MarkerOptions
 import android.util.Log
 
-class SellerAccountActivity : AppCompatActivity(), OnMapReadyCallback {
+class SellerAccountActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySellerAccountBinding
-    private lateinit var map: GoogleMap
     private lateinit var db: FirebaseFirestore
     private lateinit var auth: FirebaseAuth
     private var shopDocId: String? = null
     private var coverPhotoUri: Uri? = null
     private var coverPhotoUrl: String? = null
     private val PICK_COVER_PHOTO_REQUEST = 101
-    private lateinit var progressDialog: ProgressDialog
     private var miniMapView: MapView? = null
     private var miniMapLibreMap: MapLibreMap? = null
+    private var progressDialog: AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        MapLibre.getInstance(this)
         binding = ActivitySellerAccountBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         db = FirebaseFirestore.getInstance()
         auth = FirebaseAuth.getInstance()
-        progressDialog = ProgressDialog(this)
 
         miniMapView = binding.miniMapView
         miniMapView?.onCreate(savedInstanceState)
@@ -60,7 +53,7 @@ class SellerAccountActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun setupToolbar() {
         binding.toolbar.setNavigationOnClickListener {
-            onBackPressed()
+            finish()
         }
     }
 
@@ -97,7 +90,7 @@ class SellerAccountActivity : AppCompatActivity(), OnMapReadyCallback {
                     // Set current location if available
                     val latitude = document.getDouble("latitude")
                     val longitude = document.getDouble("longitude")
-                    val locationName = document.getString("locationName") ?: "No location set"
+                    val locationName = document.getString("locationName") ?: "Unknown Location"
                     if (latitude != null && longitude != null) {
                         binding.tvCurrentLocation.text = "$locationName (Location set)"
                         binding.btnDeleteLocation.visibility = android.view.View.VISIBLE
@@ -109,7 +102,6 @@ class SellerAccountActivity : AppCompatActivity(), OnMapReadyCallback {
                         binding.btnDeleteLocation.visibility = android.view.View.GONE
                         binding.btnIdentifyLocation.visibility = android.view.View.VISIBLE
                         binding.miniMapView.visibility = android.view.View.GONE
-                        destroyMiniMapLibre()
                     }
 
                     shopDocId = document.id
@@ -138,8 +130,7 @@ class SellerAccountActivity : AppCompatActivity(), OnMapReadyCallback {
         // Delete Cover Photo Button
         binding.btnDeleteCoverPhoto.setOnClickListener {
             val userId = auth.currentUser?.uid ?: return@setOnClickListener
-            progressDialog.setMessage("Deleting cover photo...")
-            progressDialog.show()
+            showProgressDialog("Deleting cover photo...")
 
             // Delete from Firestore
             db.collection("sellers").document(userId)
@@ -150,7 +141,7 @@ class SellerAccountActivity : AppCompatActivity(), OnMapReadyCallback {
                         val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(coverPhotoUrl!!)
                         storageRef.delete()
                             .addOnSuccessListener {
-                                progressDialog.dismiss()
+                                hideProgressDialog()
                                 binding.ivCoverPhoto.setImageResource(R.drawable.ic_add_photo)
                                 binding.btnDeleteCoverPhoto.visibility = android.view.View.GONE
                                 binding.btnSetCoverPhoto.text = "Set Cover Photo"
@@ -158,11 +149,11 @@ class SellerAccountActivity : AppCompatActivity(), OnMapReadyCallback {
                                 Toast.makeText(this, "Cover photo deleted successfully", Toast.LENGTH_SHORT).show()
                             }
                             .addOnFailureListener {
-                                progressDialog.dismiss()
+                                hideProgressDialog()
                                 Toast.makeText(this, "Failed to delete cover photo from storage", Toast.LENGTH_SHORT).show()
                             }
                     } else {
-                        progressDialog.dismiss()
+                        hideProgressDialog()
                         binding.ivCoverPhoto.setImageResource(R.drawable.ic_add_photo)
                         binding.btnDeleteCoverPhoto.visibility = android.view.View.GONE
                         binding.btnSetCoverPhoto.text = "Set Cover Photo"
@@ -171,7 +162,7 @@ class SellerAccountActivity : AppCompatActivity(), OnMapReadyCallback {
                     }
                 }
                 .addOnFailureListener {
-                    progressDialog.dismiss()
+                    hideProgressDialog()
                     Toast.makeText(this, "Failed to delete cover photo", Toast.LENGTH_SHORT).show()
                 }
         }
@@ -198,24 +189,117 @@ class SellerAccountActivity : AppCompatActivity(), OnMapReadyCallback {
         // Delete Location Button
         binding.btnDeleteLocation.setOnClickListener {
             val userId = auth.currentUser?.uid ?: return@setOnClickListener
-            val updates = hashMapOf<String, Any?>(
-                "latitude" to null,
-                "longitude" to null,
-                "locationName" to null
-            )
+            showProgressDialog("Deleting location...")
+            
             db.collection("sellers").document(userId)
-                .update(updates)
+                .update(
+                    mapOf(
+                        "latitude" to null,
+                        "longitude" to null,
+                        "locationName" to null
+                    )
+                )
                 .addOnSuccessListener {
+                    hideProgressDialog()
                     binding.tvCurrentLocation.text = "No location set"
                     binding.btnDeleteLocation.visibility = android.view.View.GONE
                     binding.btnIdentifyLocation.visibility = android.view.View.VISIBLE
                     binding.miniMapView.visibility = android.view.View.GONE
-                    destroyMiniMapLibre()
-                    Toast.makeText(this, "Location deleted", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Location deleted successfully", Toast.LENGTH_SHORT).show()
                 }
-                .addOnFailureListener {
-                    Toast.makeText(this, "Failed to delete location", Toast.LENGTH_SHORT).show()
+                .addOnFailureListener { e ->
+                    hideProgressDialog()
+                    Toast.makeText(this, "Failed to delete location: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
+        }
+    }
+
+    private fun showMiniMapLibrePreview(latitude: Double, longitude: Double) {
+        Log.d("MiniMapDebug", "showMiniMapLibrePreview called with lat=$latitude, lon=$longitude")
+        binding.miniMapView.visibility = android.view.View.VISIBLE
+        miniMapView?.onResume() // Ensure the map is resumed when shown
+        val mapTilerApiKey = getString(R.string.maptiler_api_key)
+        val styleUrl = "https://api.maptiler.com/maps/streets/style.json?key=$mapTilerApiKey"
+        miniMapView?.getMapAsync { map ->
+            miniMapLibreMap = map
+            map.setStyle(Style.Builder().fromUri(styleUrl)) { style ->
+                // Clear any existing markers
+                map.markers.forEach { map.removeMarker(it) }
+                // Add new marker
+                val location = LatLng(latitude, longitude)
+                map.addMarker(MarkerOptions()
+                    .position(location)
+                    .title("Shop Location"))
+                // Set camera position with animation
+                map.animateCamera(
+                    org.maplibre.android.camera.CameraUpdateFactory.newLatLngZoom(
+                        location,
+                        15.0
+                    ),
+                    1000
+                )
+                Log.d("MiniMapDebug", "Marker added and camera animated")
+            }
+        }
+    }
+
+    private fun showProgressDialog(message: String) {
+        progressDialog = AlertDialog.Builder(this)
+            .setMessage(message)
+            .setCancelable(false)
+            .create()
+        progressDialog?.show()
+    }
+
+    private fun hideProgressDialog() {
+        progressDialog?.dismiss()
+        progressDialog = null
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode == Activity.RESULT_OK) {
+            when (requestCode) {
+                PICK_COVER_PHOTO_REQUEST -> {
+                    data?.data?.let { uri ->
+                        coverPhotoUri = uri
+                        binding.ivCoverPhoto.setImageURI(uri)
+                        binding.btnDeleteCoverPhoto.visibility = android.view.View.VISIBLE
+                        binding.btnSetCoverPhoto.text = "Change Cover Photo"
+                    }
+                }
+                200 -> {
+                    val latitude = data?.getDoubleExtra("latitude", 0.0) ?: 0.0
+                    val longitude = data?.getDoubleExtra("longitude", 0.0) ?: 0.0
+                    val locationName = data?.getStringExtra("locationName") ?: "Location"
+                    
+                    if (latitude != 0.0 && longitude != 0.0) {
+                        // Immediately update UI with new location
+                        binding.tvCurrentLocation.text = "$locationName (Location set)"
+                        binding.btnDeleteLocation.visibility = android.view.View.VISIBLE
+                        binding.btnIdentifyLocation.visibility = android.view.View.GONE
+                        binding.miniMapView.visibility = android.view.View.VISIBLE
+                        showMiniMapLibrePreview(latitude, longitude)
+                        
+                        // Save location to Firestore
+                        val userId = auth.currentUser?.uid ?: return
+                        db.collection("sellers").document(userId)
+                            .update(
+                                mapOf(
+                                    "latitude" to latitude,
+                                    "longitude" to longitude,
+                                    "locationName" to locationName
+                                )
+                            )
+                            .addOnSuccessListener {
+                                Toast.makeText(this, "Location saved successfully", Toast.LENGTH_SHORT).show()
+                            }
+                            .addOnFailureListener { e ->
+                                Toast.makeText(this, "Failed to save location: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                    }
+                }
+            }
         }
     }
 
@@ -223,145 +307,53 @@ class SellerAccountActivity : AppCompatActivity(), OnMapReadyCallback {
         val userId = auth.currentUser?.uid ?: return
         val shopName = binding.etShopName.text.toString().trim()
         val shopDescription = binding.etShopDescription.text.toString().trim()
-        
-        progressDialog.setMessage("Updating profile...")
-        progressDialog.show()
 
-        val data = hashMapOf<String, Any>(
+        if (shopName.isEmpty()) {
+            Toast.makeText(this, "Please enter a shop name", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        showProgressDialog("Saving profile...")
+
+        val updates = mutableMapOf(
             "shopName" to shopName,
             "shopDescription" to shopDescription
         )
 
-        // Only update cover photo if it's a new one
-        if (coverPhotoUri != null) {
-            saveCoverPhoto()
-        }
+        // Handle cover photo upload if changed
+        coverPhotoUri?.let { uri ->
+            val storageRef = FirebaseStorage.getInstance().reference
+                .child("cover_photos")
+                .child(userId)
+                .child("cover_photo.jpg")
 
-        updateProfileData(userId, data)
+            storageRef.putFile(uri)
+                .addOnSuccessListener {
+                    storageRef.downloadUrl.addOnSuccessListener { downloadUri ->
+                        updates["coverPhotoUrl"] = downloadUri.toString()
+                        saveToFirestore(userId, updates)
+                    }
+                }
+                .addOnFailureListener { e ->
+                    hideProgressDialog()
+                    Toast.makeText(this, "Failed to upload cover photo: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+        } ?: run {
+            saveToFirestore(userId, updates)
+        }
     }
 
-    private fun updateProfileData(userId: String, data: Map<String, Any>) {
+    private fun saveToFirestore(userId: String, updates: Map<String, Any>) {
         db.collection("sellers").document(userId)
-            .update(data)
+            .update(updates)
             .addOnSuccessListener {
-                progressDialog.dismiss()
-                Toast.makeText(this, "Shop profile updated", Toast.LENGTH_SHORT).show()
+                hideProgressDialog()
+                Toast.makeText(this, "Profile updated successfully", Toast.LENGTH_SHORT).show()
             }
             .addOnFailureListener { e ->
-                progressDialog.dismiss()
-                Log.e("SellerAccount", "Failed to update profile: ${e.message}")
+                hideProgressDialog()
                 Toast.makeText(this, "Failed to update profile: ${e.message}", Toast.LENGTH_SHORT).show()
             }
-    }
-
-    private fun saveCoverPhoto() {
-        val userId = auth.currentUser?.uid ?: return
-        if (coverPhotoUri == null) return
-
-        progressDialog.setMessage("Uploading cover photo...")
-        progressDialog.show()
-
-        val storageRef = FirebaseStorage.getInstance().reference
-            .child("shop_covers")
-            .child(userId)
-            .child("cover_${System.currentTimeMillis()}.jpg")
-
-        storageRef.putFile(coverPhotoUri!!)
-            .addOnSuccessListener {
-                storageRef.downloadUrl.addOnSuccessListener { uri ->
-                    // Update Firestore with new cover photo URL
-                    db.collection("sellers").document(userId)
-                        .update("coverPhotoUrl", uri.toString())
-                        .addOnSuccessListener {
-                            progressDialog.dismiss()
-                            coverPhotoUrl = uri.toString()
-                            binding.btnDeleteCoverPhoto.visibility = android.view.View.VISIBLE
-                            binding.btnSetCoverPhoto.text = "Change Cover Photo"
-                            Toast.makeText(this, "Cover photo has been set successfully!", Toast.LENGTH_LONG).show()
-                        }
-                        .addOnFailureListener { e ->
-                            progressDialog.dismiss()
-                            Log.e("SellerAccount", "Failed to update cover photo URL: ${e.message}")
-                            Toast.makeText(this, "Failed to save cover photo: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
-                }
-            }
-            .addOnFailureListener { e ->
-                progressDialog.dismiss()
-                Log.e("SellerAccount", "Failed to upload cover photo: ${e.message}")
-                Toast.makeText(this, "Failed to upload cover photo: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == PICK_COVER_PHOTO_REQUEST && resultCode == Activity.RESULT_OK && data != null) {
-            coverPhotoUri = data.data
-            binding.ivCoverPhoto.setImageURI(coverPhotoUri)
-            // Save cover photo immediately when selected
-            saveCoverPhoto()
-        } else if (requestCode == 200 && resultCode == Activity.RESULT_OK && data != null) {
-            val lat = data.getDoubleExtra("latitude", 0.0)
-            val lng = data.getDoubleExtra("longitude", 0.0)
-            val locationName = data.getStringExtra("locationName") ?: ""
-            val userId = auth.currentUser?.uid ?: return
-            val update = hashMapOf<String, Any>(
-                "latitude" to lat,
-                "longitude" to lng,
-                "locationName" to locationName
-            )
-            db.collection("sellers").document(userId)
-                .update(update as Map<String, Any>)
-                .addOnSuccessListener {
-                    binding.tvCurrentLocation.text = "$locationName (Location set)"
-                    binding.btnDeleteLocation.visibility = android.view.View.VISIBLE
-                    binding.btnIdentifyLocation.visibility = android.view.View.GONE
-                    binding.miniMapView.visibility = android.view.View.VISIBLE
-                    showMiniMapLibrePreview(lat, lng)
-                    Toast.makeText(this, "Shop location updated", Toast.LENGTH_SHORT).show()
-                }
-                .addOnFailureListener {
-                    Toast.makeText(this, "Failed to update location", Toast.LENGTH_SHORT).show()
-                }
-        }
-    }
-
-    private fun showMiniMapLibrePreview(latitude: Double, longitude: Double) {
-        val TAG = "MiniMapLibre"
-        val validLat = if (latitude == 0.0 && longitude == 0.0) 16.4023 else latitude
-        val validLng = if (latitude == 0.0 && longitude == 0.0) 120.5960 else longitude
-        val shopLatLng = MLLatLng(validLat, validLng)
-        val styleUrl = "https://api.maptiler.com/maps/streets/style.json?key=" + getString(R.string.maptiler_api_key)
-        Log.d(TAG, "MiniMap coordinates: $validLat, $validLng")
-        Log.d(TAG, "MiniMap styleUrl: $styleUrl")
-        Toast.makeText(this, "MiniMap: $validLat, $validLng", Toast.LENGTH_SHORT).show()
-        miniMapView?.getMapAsync { mapLibreMap ->
-            miniMapLibreMap = mapLibreMap
-            mapLibreMap.setStyle(styleUrl) { style ->
-                mapLibreMap.clear()
-                mapLibreMap.addMarker(MLMarkerOptions().position(shopLatLng).title("Shop Location"))
-                mapLibreMap.moveCamera(org.maplibre.android.camera.CameraUpdateFactory.newLatLngZoom(shopLatLng, 16.0))
-                mapLibreMap.uiSettings.isScrollGesturesEnabled = false
-                mapLibreMap.uiSettings.isZoomGesturesEnabled = false
-                mapLibreMap.uiSettings.isTiltGesturesEnabled = false
-                mapLibreMap.uiSettings.isRotateGesturesEnabled = false
-                mapLibreMap.uiSettings.isCompassEnabled = false
-                mapLibreMap.uiSettings.isAttributionEnabled = false
-                mapLibreMap.uiSettings.isLogoEnabled = false
-                // Error handling: check if style loaded
-                if (style == null) {
-                    Toast.makeText(this, "MiniMap style failed to load", Toast.LENGTH_LONG).show()
-                    Log.e(TAG, "MiniMap style failed to load")
-                }
-            }
-        }
-    }
-
-    private fun destroyMiniMapLibre() {
-        miniMapView?.onPause()
-        miniMapView?.onStop()
-        miniMapView?.onDestroy()
-        miniMapLibreMap = null
     }
 
     override fun onStart() {
@@ -386,22 +378,10 @@ class SellerAccountActivity : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onDestroy() {
         super.onDestroy()
-        miniMapView?.onDestroy()
     }
 
-    override fun onMapReady(googleMap: GoogleMap) {
-        map = googleMap
-        val userId = auth.currentUser?.uid ?: return
-        db.collection("sellers").document(userId)
-            .get()
-            .addOnSuccessListener { document ->
-                val latitude = document.getDouble("latitude")
-                val longitude = document.getDouble("longitude")
-                if (latitude != null && longitude != null) {
-                    val location = LatLng(latitude, longitude)
-                    map.addMarker(MarkerOptions().position(location).title("Your Location"))
-                    map.moveCamera(CameraUpdateFactory.newLatLngZoom(location, 15f))
-                }
-            }
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        miniMapView?.onSaveInstanceState(outState)
     }
 } 
