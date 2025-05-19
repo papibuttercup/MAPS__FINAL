@@ -174,6 +174,7 @@ public class ListNewItemActivity extends AppCompatActivity {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     coverPhotoUri = result.getData().getData();
                     imgCoverPreview.setImageURI(coverPhotoUri);
+                    imgCoverPreview.setVisibility(View.VISIBLE);
                 }
             }
         );
@@ -191,6 +192,7 @@ public class ListNewItemActivity extends AppCompatActivity {
                         }
                     }
                     Toast.makeText(this, "Selected " + productImageUris.size() + " images", Toast.LENGTH_SHORT).show();
+                    refreshImagePreviews();
                 }
             }
         );

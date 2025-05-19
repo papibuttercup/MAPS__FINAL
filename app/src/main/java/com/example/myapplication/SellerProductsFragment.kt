@@ -42,13 +42,8 @@ class SellerProductsFragment : Fragment() {
         binding.rvProducts.adapter = adapter
         adapter.setOnEditProductListener(object : ProductAdapter.OnEditProductListener {
             override fun onEditProduct(product: SellerProduct) {
-                val intent = Intent(requireContext(), ListNewItemActivity::class.java)
+                val intent = Intent(requireContext(), EditProductActivity::class.java)
                 intent.putExtra("productId", product.id)
-                intent.putExtra("name", product.name)
-                intent.putExtra("price", product.price)
-                intent.putExtra("stock", product.stock)
-                intent.putExtra("coverPhotoUri", product.imageUrl)
-                // Add more extras as needed
                 startActivity(intent)
             }
         })
@@ -69,8 +64,9 @@ class SellerProductsFragment : Fragment() {
                 if (_binding == null) return@addSnapshotListener
                 productList.clear()
                 snapshot?.forEach { doc ->
-                    val imageUrl = (doc.get("productImageUris") as? List<*>)?.firstOrNull() as? String
-                        ?: doc.getString("coverPhotoUri") ?: ""
+                    val coverPhotoUri = doc.getString("coverPhotoUri")
+                    val imageUrl = if (!coverPhotoUri.isNullOrEmpty()) coverPhotoUri
+                        else (doc.get("productImageUris") as? List<*>)?.firstOrNull() as? String ?: ""
                     val product = SellerProduct(
                         id = doc.id,
                         name = doc.getString("name") ?: "",
@@ -84,6 +80,11 @@ class SellerProductsFragment : Fragment() {
                 adapter.notifyDataSetChanged()
                 binding.tvTotalProducts.text = productList.size.toString()
             }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        loadProducts()
     }
 
     override fun onDestroyView() {

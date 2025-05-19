@@ -1,10 +1,12 @@
 package com.example.myapplication
 
+import android.app.AlertDialog
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.myapplication.databinding.ItemProductBinding
+import com.google.firebase.firestore.FirebaseFirestore
 
 // Data class for SellerProduct
 // Renamed from Product to avoid conflict with Product.java
@@ -50,8 +52,28 @@ class ProductAdapter(private val products: List<SellerProduct>, private val isSe
             holder.binding.btnEditProduct.setOnClickListener {
                 editListener?.onEditProduct(product)
             }
+            holder.binding.btnDeleteProduct.visibility = android.view.View.VISIBLE
+            holder.binding.btnDeleteProduct.setOnClickListener {
+                AlertDialog.Builder(holder.itemView.context)
+                    .setTitle("Delete Product")
+                    .setMessage("Are you sure you want to delete this product?")
+                    .setPositiveButton("Delete") { _, _ ->
+                        FirebaseFirestore.getInstance().collection("products")
+                            .document(product.id)
+                            .delete()
+                            .addOnSuccessListener {
+                                (products as? MutableList<SellerProduct>)?.let {
+                                    it.removeAt(position)
+                                    notifyItemRemoved(position)
+                                }
+                            }
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            }
         } else {
             holder.binding.btnEditProduct.visibility = android.view.View.GONE
+            holder.binding.btnDeleteProduct.visibility = android.view.View.GONE
         }
     }
 
