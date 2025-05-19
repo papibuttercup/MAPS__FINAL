@@ -7,6 +7,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,13 +19,17 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.HashMap;
 import java.util.Map;
 
+import android.widget.ArrayAdapter;
+
 public class CreateSellerAccountActivity extends AppCompatActivity {
-    private EditText firstNameEditText, lastNameEditText, shopNameEditText, shopLocationEditText,
+    private EditText firstNameEditText, lastNameEditText, shopNameEditText, /*shopLocationEditText,*/
             emailEditText, phoneEditText, passwordEditText, confirmPasswordEditText;
     private CheckBox termsCheckbox;
     private Button createAccountButton;
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
+    private Spinner spinnerShopBarangay;
+    private String selectedBarangay = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,13 +49,29 @@ public class CreateSellerAccountActivity extends AppCompatActivity {
         firstNameEditText = findViewById(R.id.editTextFirstName);
         lastNameEditText = findViewById(R.id.editTextLastName);
         shopNameEditText = findViewById(R.id.editTextShopName);
-        shopLocationEditText = findViewById(R.id.editTextShopLocation);
         emailEditText = findViewById(R.id.editTextEmail);
         phoneEditText = findViewById(R.id.editTextPhone);
         passwordEditText = findViewById(R.id.editTextPassword);
         confirmPasswordEditText = findViewById(R.id.editTextConfirmPassword);
         termsCheckbox = findViewById(R.id.checkBoxTerms);
         createAccountButton = findViewById(R.id.buttonCreateAccount);
+        spinnerShopBarangay = findViewById(R.id.spinnerShopBarangay);
+
+        // Set up barangay spinner
+        ArrayAdapter<CharSequence> barangayAdapter = ArrayAdapter.createFromResource(
+            this, R.array.baguio_barangays, android.R.layout.simple_spinner_item);
+        barangayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerShopBarangay.setAdapter(barangayAdapter);
+        spinnerShopBarangay.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                selectedBarangay = parent.getItemAtPosition(position).toString();
+            }
+            @Override
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+                selectedBarangay = "";
+            }
+        });
     }
 
     private void setupClickListeners() {
@@ -79,8 +100,8 @@ public class CreateSellerAccountActivity extends AppCompatActivity {
             isValid = false;
         }
 
-        if (TextUtils.isEmpty(shopLocationEditText.getText())) {
-            shopLocationEditText.setError("Shop location is required");
+        if (TextUtils.isEmpty(selectedBarangay)) {
+            Toast.makeText(this, "Please select a shop barangay", Toast.LENGTH_SHORT).show();
             isValid = false;
         }
 
@@ -139,7 +160,7 @@ public class CreateSellerAccountActivity extends AppCompatActivity {
         sellerData.put("firstName", firstNameEditText.getText().toString());
         sellerData.put("lastName", lastNameEditText.getText().toString());
         sellerData.put("shopName", shopNameEditText.getText().toString());
-        sellerData.put("shopLocation", shopLocationEditText.getText().toString());
+        sellerData.put("shopLocation", selectedBarangay);
         sellerData.put("email", emailEditText.getText().toString());
         sellerData.put("phone", phoneEditText.getText().toString());
         sellerData.put("accountType", "seller");

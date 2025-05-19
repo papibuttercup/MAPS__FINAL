@@ -47,7 +47,12 @@ class LoginActivity : AppCompatActivity() {
 
     private fun setupClickListeners() {
         binding.loginButton.setOnClickListener { handleLogin() }
-        binding.createAccountButton.setOnClickListener { handleCreateAccount() }
+        binding.createCustomerAccountButton.setOnClickListener { 
+            startActivity(Intent(this@LoginActivity, SignUpActivity::class.java))
+        }
+        binding.createSellerAccountButton.setOnClickListener {
+            startActivity(Intent(this@LoginActivity, CreateSellerAccountActivity::class.java))
+        }
         binding.forgotPassword.setOnClickListener { handleForgotPassword() }
         binding.signUpText.setOnClickListener { handleSignUp() }
     }
@@ -253,10 +258,6 @@ class LoginActivity : AppCompatActivity() {
     private fun showLoading(show: Boolean) {
         binding.progressBar.visibility = if (show) View.VISIBLE else View.GONE
         binding.loginButton.isEnabled = !show
-    }
-
-    private fun handleCreateAccount() {
-        startActivity(Intent(this@LoginActivity, SignUpActivity::class.java))
     }
 
     private fun handleForgotPassword() {

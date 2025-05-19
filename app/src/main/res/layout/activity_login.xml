@@ -129,12 +129,24 @@
                 android:backgroundTint="#03A9F4" />
         </FrameLayout>
 
-        <!-- Create Account Button -->
+        <!-- Create Account Buttons -->
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/createAccountButton"
+            android:id="@+id/createCustomerAccountButton"
             android:layout_width="match_parent"
             android:layout_height="50dp"
-            android:text="Create Account"
+            android:text="Create Customer Account"
+            android:textColor="#03A9F4"
+            android:backgroundTint="#1F1F1F"
+            android:strokeColor="#03A9F4"
+            android:strokeWidth="1"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_marginBottom="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/createSellerAccountButton"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="Create Seller Account"
             android:textColor="#03A9F4"
             android:backgroundTint="#1F1F1F"
             android:strokeColor="#03A9F4"
