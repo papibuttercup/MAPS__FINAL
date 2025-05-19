@@ -60,9 +60,18 @@ public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.
         }
         holder.txtProductName.setText(product.name);
         holder.txtProductPrice.setText("₱" + product.price);
+        TextView stockView = holder.itemView.findViewById(R.id.textProductStock);
+        if (stockView != null) {
+            stockView.setText("Stock: " + (product.stock != null ? product.stock : "N/A"));
+        }
         if (holder.btnEditProduct != null) {
             holder.btnEditProduct.setVisibility(View.GONE);
         }
+        holder.itemView.setOnClickListener(v -> {
+            android.content.Intent intent = new android.content.Intent(context, ProductDetailsActivity.class);
+            intent.putExtra("productId", product.id);
+            context.startActivity(intent);
+        });
     }
 
     @Override

@@ -6,6 +6,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
 
@@ -37,15 +38,16 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.ViewHo
         holder.categoryLabel.setText(category);
 
         // Highlight selected
+        boolean isSelected = position == selectedPosition;
         holder.cardView.setCardBackgroundColor(
-            position == selectedPosition ?
-                holder.itemView.getResources().getColor(R.color.primaryColor) :
-                holder.itemView.getResources().getColor(android.R.color.white)
+            isSelected ?
+                ContextCompat.getColor(holder.itemView.getContext(), R.color.primaryColor) :
+                ContextCompat.getColor(holder.itemView.getContext(), android.R.color.white)
         );
         holder.categoryLabel.setTextColor(
-            position == selectedPosition ?
-                holder.itemView.getResources().getColor(android.R.color.white) :
-                holder.itemView.getResources().getColor(android.R.color.black)
+            isSelected ?
+                ContextCompat.getColor(holder.itemView.getContext(), android.R.color.white) :
+                ContextCompat.getColor(holder.itemView.getContext(), android.R.color.black)
         );
 
         holder.itemView.setOnClickListener(v -> {

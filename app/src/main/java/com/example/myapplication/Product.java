@@ -4,17 +4,20 @@ import java.util.List;
 
 public class Product {
     public String id;
-    public String sellerId;
-    public String category;
-    public String coverPhotoUri;
-    public long createdAt;
-    public String description;
-    public boolean isAvailable;
-    public String mainCategory;
     public String name;
-    public String parcelSize;
+    public String description;
+    public String coverPhotoUri;
+    public List<String> productImageUris;
     public double price;
-    public java.util.List<String> productImageUris;
+    public Long stock;
+    public String sellerId;
+    public String sellerName;
+    public boolean isAvailable;
+    public double weight;
+    public String category;
+    public long createdAt;
+    public String mainCategory;
+    public String parcelSize;
 
     public Product() {}
 } 

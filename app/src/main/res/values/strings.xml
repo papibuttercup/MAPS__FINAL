@@ -89,4 +89,92 @@
         <item>Sleepwear</item>
         <item>Underwear</item>
     </string-array>
+    <string-array name="baguio_barangays">
+        <item>Abanao-Zandueta-Kayong-Chugum-Otek</item>
+        <item>Ambiong</item>
+        <item>Andres Bonifacio (Lower Bokawkan)</item>
+        <item>Asin Road</item>
+        <item>Aurora Hill Proper (Malvar-Sgt. Floresca)</item>
+        <item>Aurora Hill, South Central</item>
+        <item>Aurora Hill, North Central</item>
+        <item>Balsigan</item>
+        <item>Bakakeng Central</item>
+        <item>Bakakeng North</item>
+        <item>Bayan Park East</item>
+        <item>Bayan Park Village</item>
+        <item>Bayan Park West</item>
+        <item>Brookside</item>
+        <item>Brookspoint</item>
+        <item>Burnham-Legarda</item>
+        <item>Cabinet Hill-Teachers Camp</item>
+        <item>Camp 7</item>
+        <item>Camp 8</item>
+        <item>Camp Allen</item>
+        <item>Campo Filipino</item>
+        <item>City Camp Central</item>
+        <item>City Camp Proper</item>
+        <item>Country Club Village</item>
+        <item>Cresencia Village</item>
+        <item>Dominican Hill-Mirador</item>
+        <item>Dontogan</item>
+        <item>Engineers Hill</item>
+        <item>Fairview</item>
+        <item>Ferdinand (Happy Homes)</item>
+        <item>Fort del Pilar</item>
+        <item>Gibraltar</item>
+        <item>Greenwater Village</item>
+        <item>Harrison-Claudio Carantes</item>
+        <item>Hillside</item>
+        <item>Holy Ghost Extension</item>
+        <item>Holy Ghost Proper</item>
+        <item>Imelda Marcos (La Salle)</item>
+        <item>Imelda Village</item>
+        <item>Irisan</item>
+        <item>John Hay</item>
+        <item>Kayang-Hilltop</item>
+        <item>Kias</item>
+        <item>Loakan-Apugan</item>
+        <item>Loakan-Liwanag</item>
+        <item>Loakan Proper</item>
+        <item>Lourdes Extension</item>
+        <item>Lourdes Subdivision Proper</item>
+        <item>Lower Dagsian</item>
+        <item>Lower Magsaysay</item>
+        <item>Lower Quirino-Magsaysay</item>
+        <item>Lower Rock Quarry</item>
+        <item>Lucnab</item>
+        <item>Malcolm Square-Perfecto (Jose Abad Santos)</item>
+        <item>Middle Quirino Hill</item>
+        <item>Military Cut-off</item>
+        <item>Modern Site, Aurora Hill</item>
+        <item>Montinola Subdivision, Kisad</item>
+        <item>New Lucban</item>
+        <item>Pacdal</item>
+        <item>Padre Burgos</item>
+        <item>Palma-Urbano (Cariño-Palma)</item>
+        <item>Phil-Am</item>
+        <item>Pinget</item>
+        <item>Poliwes</item>
+        <item>Quirino Hill Proper</item>
+        <item>Quirino-Magsaysay, Upper (Upper Magsaysay)</item>
+        <item>Rizal Monument Area</item>
+        <item>Rock Quarry, Upper</item>
+        <item>Saint Joseph Village</item>
+        <item>Salud Mitra</item>
+        <item>San Antonio Village</item>
+        <item>San Luis Village</item>
+        <item>San Roque Village</item>
+        <item>San Vicente</item>
+        <item>Scout Barrio</item>
+        <item>Session Road Area</item>
+        <item>SLU-SVP Housing Village</item>
+        <item>South Drive</item>
+        <item>Teodora Alonzo</item>
+        <item>Trancoville</item>
+        <item>Upper Dagsian</item>
+        <item>Upper Market Subdivision</item>
+        <item>Upper Rock Quarry</item>
+        <item>Victoria Village</item>
+        <item>West Quirino Hill</item>
+    </string-array>
 </resources>

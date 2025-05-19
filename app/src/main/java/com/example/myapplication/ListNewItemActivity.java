@@ -1,6 +1,6 @@
 package com.example.myapplication;
 
-import android.app.ProgressDialog;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
@@ -17,7 +17,8 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.Toast;
-import androidx.annotation.Nullable;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -26,7 +27,9 @@ import com.google.firebase.storage.StorageReference;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class ListNewItemActivity extends AppCompatActivity {
     private static final int PICK_COVER_PHOTO_REQUEST = 1;
@@ -37,7 +40,7 @@ public class ListNewItemActivity extends AppCompatActivity {
     private ImageView imgCoverPreview;
     private LinearLayout layoutImagePreviews;
     private ArrayList<Uri> productImageUris = new ArrayList<>();
-    private ProgressDialog progressDialog;
+    private AlertDialog progressDialog;
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
     private Uri coverPhotoUri;
@@ -46,8 +49,11 @@ public class ListNewItemActivity extends AppCompatActivity {
     private String editingCoverPhotoUri = null;
     private ArrayList<String> editingProductImageUris = new ArrayList<>();
 
+    private ActivityResultLauncher<Intent> coverPhotoLauncher;
+    private ActivityResultLauncher<Intent> productImagesLauncher;
+
     @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list_new_item);
 
@@ -64,7 +70,7 @@ public class ListNewItemActivity extends AppCompatActivity {
         btnAddProduct = findViewById(R.id.btnAddProduct);
         imgCoverPreview = findViewById(R.id.imgCoverPreview);
         layoutImagePreviews = findViewById(R.id.layoutImagePreviews);
-        progressDialog = new ProgressDialog(this);
+        progressDialog = new AlertDialog.Builder(this).setView(R.layout.progress_dialog).setCancelable(false).create();
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
 
@@ -107,7 +113,7 @@ public class ListNewItemActivity extends AppCompatActivity {
                     Intent intent = new Intent();
                     intent.setType("image/*");
                     intent.setAction(Intent.ACTION_GET_CONTENT);
-                    startActivityForResult(Intent.createChooser(intent, "Select Cover Photo"), PICK_COVER_PHOTO_REQUEST);
+                    coverPhotoLauncher.launch(Intent.createChooser(intent, "Select Cover Photo"));
                 }
             });
             btnAddImages.setOnClickListener(new View.OnClickListener() {
@@ -117,7 +123,7 @@ public class ListNewItemActivity extends AppCompatActivity {
                     intent.setType("image/*");
                     intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
                     intent.setAction(Intent.ACTION_GET_CONTENT);
-                    startActivityForResult(Intent.createChooser(intent, "Select Product Images (up to 8)"), PICK_IMAGES_REQUEST);
+                    productImagesLauncher.launch(Intent.createChooser(intent, "Select Product Images (up to 8)"));
                 }
             });
 
@@ -128,6 +134,8 @@ public class ListNewItemActivity extends AppCompatActivity {
                 }
             });
         }
+
+        setupActivityResultLaunchers();
     }
 
     private void setupCategorySpinners() {
@@ -159,26 +167,33 @@ public class ListNewItemActivity extends AppCompatActivity {
         });
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == PICK_COVER_PHOTO_REQUEST && resultCode == RESULT_OK && data != null && data.getData() != null) {
-            coverPhotoUri = data.getData();
-            imgCoverPreview.setImageURI(coverPhotoUri);
-            imgCoverPreview.setVisibility(View.VISIBLE);
-        } else if (requestCode == PICK_IMAGES_REQUEST && resultCode == RESULT_OK && data != null) {
-            productImageUris.clear();
-            if (data.getClipData() != null) {
-                int count = Math.min(data.getClipData().getItemCount(), 8);
-                for (int i = 0; i < count; i++) {
-                    Uri imageUri = data.getClipData().getItemAt(i).getUri();
-                    productImageUris.add(imageUri);
+    private void setupActivityResultLaunchers() {
+        coverPhotoLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    coverPhotoUri = result.getData().getData();
+                    imgCoverPreview.setImageURI(coverPhotoUri);
                 }
-            } else if (data.getData() != null) {
-                productImageUris.add(data.getData());
             }
-            refreshImagePreviews();
-        }
+        );
+
+        productImagesLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    if (result.getData().getClipData() != null) {
+                        for (int i = 0; i < result.getData().getClipData().getItemCount(); i++) {
+                            Uri imageUri = result.getData().getClipData().getItemAt(i).getUri();
+                            if (productImageUris.size() < 8) {
+                                productImageUris.add(imageUri);
+                            }
+                        }
+                    }
+                    Toast.makeText(this, "Selected " + productImageUris.size() + " images", Toast.LENGTH_SHORT).show();
+                }
+            }
+        );
     }
 
     private void addImagePreview(final Uri uri) {
@@ -257,8 +272,8 @@ public class ListNewItemActivity extends AppCompatActivity {
             return;
         }
 
-        progressDialog.setMessage("Uploading images...");
         progressDialog.show();
+        progressDialog.setMessage("Uploading images...");
 
         FirebaseStorage storage = FirebaseStorage.getInstance();
         StorageReference storageRef = storage.getReference();

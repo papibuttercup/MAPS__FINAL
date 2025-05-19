@@ -35,6 +35,10 @@ class SellerMainActivity : AppCompatActivity() {
                     loadFragment(SellerProductsFragment())
                     true
                 }
+                R.id.navigation_orders -> {
+                    startActivity(Intent(this, SellerOrdersActivity::class.java))
+                    true
+                }
                 R.id.navigation_account -> {
                     startActivity(Intent(this, SellerAccountActivity::class.java))
                     true

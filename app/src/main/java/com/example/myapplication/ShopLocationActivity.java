@@ -7,6 +7,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.activity.OnBackPressedCallback;
 import com.google.firebase.firestore.FirebaseFirestore;
 import org.maplibre.android.MapLibre;
 import org.maplibre.android.annotations.Marker;
@@ -32,6 +33,14 @@ public class ShopLocationActivity extends AppCompatActivity implements OnMapRead
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_shop_location);
+
+        // Handle back press
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                finish();
+            }
+        });
 
         // Initialize MapLibre
         MapLibre.getInstance(this);
@@ -114,7 +123,7 @@ public class ShopLocationActivity extends AppCompatActivity implements OnMapRead
 
     @Override
     public boolean onSupportNavigateUp() {
-        onBackPressed();
+        getOnBackPressedDispatcher().onBackPressed();
         return true;
     }
 

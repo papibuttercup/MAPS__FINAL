@@ -36,7 +36,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         // Initialize bottom navigation
         bottomNavigationView = findViewById(R.id.bottomNavigation);
         bottomNavigationView.setSelectedItemId(R.id.navigation_for_you);
-        bottomNavigationView.setOnNavigationItemSelectedListener(item -> {
+        bottomNavigationView.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
             if (itemId == R.id.navigation_for_you) {
                 // Already on For You tab

@@ -72,6 +72,7 @@ import org.maplibre.android.style.layers.PropertyFactory;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -537,7 +538,7 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
     }
 
     private void searchLocation(String address) {
-        String encodedAddress = URLEncoder.encode(address);
+        String encodedAddress = URLEncoder.encode(address, StandardCharsets.UTF_8);
         String url = "https://api.maptiler.com/geocoding/" + encodedAddress + ".json?key=" + getString(R.string.maptiler_api_key);
 
         Request request = new Request.Builder()
@@ -916,7 +917,7 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
             Log.d("Maps", "Bottom Navigation is not null, proceeding with setup");
             bottomNavigation.setSelectedItemId(R.id.navigation_for_you);
             bottomNavigation.setVisibility(View.VISIBLE);
-            bottomNavigation.setOnNavigationItemSelectedListener(item -> {
+            bottomNavigation.setOnItemSelectedListener(item -> {
                 int itemId = item.getItemId();
                 Log.d("Maps", "Navigation item selected: " + itemId);
                 if (itemId == R.id.navigation_for_you) {
