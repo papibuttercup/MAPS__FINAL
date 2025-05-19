@@ -1,5 +1,6 @@
 package com.example.myapplication;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -58,38 +59,17 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
         categoryRecyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
         productRecyclerView.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(getContext(), 2));
         categoryAdapter = new CategoryAdapter(categories, this);
-        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        db.collection("sellers")
-            .document(userId)
-            .get()
-            .addOnSuccessListener(documentSnapshot -> {
-                boolean isSeller = documentSnapshot.exists();
-                productAdapter = new ProductListAdapter(getContext(), products, isSeller);
-                productRecyclerView.setAdapter(productAdapter);
-                productAdapter.setOnDeleteProductListener(product -> {
-                    android.widget.Toast.makeText(getContext(), "Delete clicked for: " + product.name, android.widget.Toast.LENGTH_SHORT).show();
-                    FirebaseFirestore.getInstance().collection("products")
-                        .document(product.id)
-                        .delete()
-                        .addOnSuccessListener(aVoid -> {
-                            int index = -1;
-                            for (int i = 0; i < products.size(); i++) {
-                                if (products.get(i).id.equals(product.id)) {
-                                    index = i;
-                                    break;
-                                }
-                            }
-                            if (index != -1) {
-                                products.remove(index);
-                                productAdapter.notifyItemRemoved(index);
-                            }
-                            android.widget.Toast.makeText(getContext(), "Product deleted successfully!", android.widget.Toast.LENGTH_SHORT).show();
-                        })
-                        .addOnFailureListener(e -> {
-                            android.widget.Toast.makeText(getContext(), "Failed to delete product: " + e.getMessage(), android.widget.Toast.LENGTH_SHORT).show();
-                        });
-                });
-            });
+        categoryRecyclerView.setAdapter(categoryAdapter);
+        
+        // Initialize product adapter with click listener
+        productAdapter = new ProductListAdapter(getContext(), products, false);
+        productAdapter.setOnProductClickListener(product -> {
+            Intent intent = new Intent(getActivity(), ProductDetailsActivity.class);
+            intent.putExtra("productId", product.id);
+            startActivity(intent);
+        });
+        productRecyclerView.setAdapter(productAdapter);
+        
         loadAllProductsForSeller();
         loadCategories();
         return view;
@@ -130,6 +110,7 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
                 products.clear();
                 for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
                     Product product = doc.toObject(Product.class);
+                    product.id = doc.getId();
                     products.add(product);
                 }
                 productAdapter.notifyDataSetChanged();
@@ -144,6 +125,7 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
                 products.clear();
                 for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
                     Product product = doc.toObject(Product.class);
+                    product.id = doc.getId();
                     products.add(product);
                 }
                 productAdapter.notifyDataSetChanged();

@@ -21,31 +21,28 @@ public class SellerDashboardActivity extends AppCompatActivity {
         BottomNavigationView bottomNavigation = findViewById(R.id.bottomNavigation);
 
         cardListItem.setOnClickListener(v -> {
-            // TODO: Navigate to product posting screen
-            Toast.makeText(this, "Navigate to List an Item", Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(this, ListNewItemActivity.class));
         });
         cardShopLocation.setOnClickListener(v -> {
-            // TODO: Navigate to map/location picker screen
-            Toast.makeText(this, "Navigate to Shop Location Picker", Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(this, ShopLocationActivity.class));
         });
         cardOrders.setOnClickListener(v -> {
-            // TODO: Navigate to orders list screen
-            Toast.makeText(this, "Navigate to Orders", Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(this, SellerOrdersActivity.class));
         });
 
         bottomNavigation.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
-            if (itemId == R.id.nav_pending_orders) {
-                // TODO: Navigate to pending orders screen
-                Toast.makeText(this, "Pending Orders", Toast.LENGTH_SHORT).show();
+            if (itemId == R.id.nav_dashboard) {
+                // Already on dashboard
                 return true;
-            } else if (itemId == R.id.nav_location) {
-                // TODO: Navigate to location/map screen
-                Toast.makeText(this, "Location", Toast.LENGTH_SHORT).show();
+            } else if (itemId == R.id.nav_products) {
+                startActivity(new Intent(this, SellerMainActivity.class));
+                return true;
+            } else if (itemId == R.id.nav_orders) {
+                startActivity(new Intent(this, SellerOrdersActivity.class));
                 return true;
             } else if (itemId == R.id.nav_account) {
-                // TODO: Navigate to seller account/profile screen
-                Toast.makeText(this, "Account", Toast.LENGTH_SHORT).show();
+                startActivity(new Intent(this, SellerAccountActivity.class));
                 return true;
             }
             return false;

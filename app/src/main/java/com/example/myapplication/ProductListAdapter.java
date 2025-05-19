@@ -21,6 +21,7 @@ public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.
     private Context context;
     private OnEditProductListener editListener;
     private OnDeleteProductListener deleteListener;
+    private OnProductClickListener productClickListener;
     private boolean isSeller = false;
 
     public interface OnEditProductListener {
@@ -31,12 +32,20 @@ public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.
         void onDeleteProduct(Product product);
     }
 
+    public interface OnProductClickListener {
+        void onProductClick(Product product);
+    }
+
     public void setOnEditProductListener(OnEditProductListener listener) {
         this.editListener = listener;
     }
 
     public void setOnDeleteProductListener(OnDeleteProductListener listener) {
         this.deleteListener = listener;
+    }
+
+    public void setOnProductClickListener(OnProductClickListener listener) {
+        this.productClickListener = listener;
     }
 
     public ProductListAdapter(Context context, List<Product> products, boolean isSeller) {
@@ -106,9 +115,9 @@ public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.
             }
         }
         holder.itemView.setOnClickListener(v -> {
-            android.content.Intent intent = new android.content.Intent(context, ProductDetailsActivity.class);
-            intent.putExtra("productId", product.id);
-            context.startActivity(intent);
+            if (productClickListener != null) {
+                productClickListener.onProductClick(product);
+            }
         });
     }
 
