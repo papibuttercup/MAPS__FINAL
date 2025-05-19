@@ -15,6 +15,7 @@ import android.widget.Toast;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import android.content.Intent;
 
 public class ForYouFragment extends Fragment {
     private RecyclerView recyclerView;
@@ -41,6 +42,13 @@ public class ForYouFragment extends Fragment {
         products = new ArrayList<>();
         adapter = new ProductListAdapter(getContext(), products, false);
         recyclerView.setAdapter(adapter);
+        
+        // Set product click listener
+        adapter.setOnProductClickListener(product -> {
+            Intent intent = new Intent(getContext(), ProductDetailsActivity.class);
+            intent.putExtra("productId", product.id);
+            startActivity(intent);
+        });
         
         db = FirebaseFirestore.getInstance();
         loadAllProducts();
