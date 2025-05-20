@@ -34,7 +34,7 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/subcategoryRecyclerView"
         android:layout_width="match_parent"
-        android:layout_height="72dp"
+        android:layout_height="80dp"
         android:layout_marginBottom="16dp"
         android:orientation="horizontal"
         android:overScrollMode="never"
