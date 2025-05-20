@@ -1,5 +1,6 @@
 package com.example.myapplication
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -18,6 +19,27 @@ class SellerDashboardFragment : Fragment() {
     ): View {
         _binding = FragmentSellerDashboardBinding.inflate(inflater, container, false)
         return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        
+        // Set up click listeners
+        binding.cardListItem.setOnClickListener {
+            startActivity(Intent(requireContext(), ListNewItemActivity::class.java))
+        }
+        
+        binding.cardShopLocation.setOnClickListener {
+            startActivity(Intent(requireContext(), ShopLocationActivity::class.java))
+        }
+        
+        binding.cardOrders.setOnClickListener {
+            startActivity(Intent(requireContext(), SellerOrdersActivity::class.java))
+        }
+        
+        binding.btnSellerChats.setOnClickListener {
+            startActivity(Intent(requireContext(), SellerChatListActivity::class.java))
+        }
     }
 
     override fun onDestroyView() {

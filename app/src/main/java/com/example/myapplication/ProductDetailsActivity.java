@@ -16,6 +16,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.ArrayList;
 import java.util.List;
 import android.widget.ImageButton;
+import android.util.Log;
 
 public class ProductDetailsActivity extends AppCompatActivity {
     private ViewPager2 viewPagerImages;
@@ -27,6 +28,7 @@ public class ProductDetailsActivity extends AppCompatActivity {
     private Product product;
     private List<String> imageUrls = new ArrayList<>();
     private TextView txtImageCount;
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -47,8 +49,10 @@ public class ProductDetailsActivity extends AppCompatActivity {
         txtSellerName = findViewById(R.id.txtSellerName);
         txtStock = findViewById(R.id.txtStock);
 
+        db = FirebaseFirestore.getInstance();
+
         String productId = getIntent().getStringExtra("productId");
-        FirebaseFirestore.getInstance().collection("products").document(productId)
+        db.collection("products").document(productId)
             .get().addOnSuccessListener(doc -> {
                 product = doc.toObject(Product.class);
                 if (product != null) {
@@ -129,7 +133,7 @@ public class ProductDetailsActivity extends AppCompatActivity {
                 cartItem.put("sellerId", product.sellerId);
                 cartItem.put("sellerName", product.sellerName);
                 cartItem.put("stock", product.stock);
-                FirebaseFirestore.getInstance()
+                db
                     .collection("users")
                     .document(userId)
                     .collection("cart")
@@ -142,9 +146,26 @@ public class ProductDetailsActivity extends AppCompatActivity {
 
         btnMessageSeller.setOnClickListener(v -> {
             if (product != null && product.sellerId != null) {
-                // TODO: Replace with actual chat/messaging activity
-                Toast.makeText(this, "Contacting seller: " + product.sellerName, Toast.LENGTH_SHORT).show();
-                // Example: startActivity(new Intent(this, ChatActivity.class).putExtra("sellerId", product.sellerId));
+                String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+                // Verify the seller exists before starting chat
+                db.collection("sellers").document(product.sellerId)
+                    .get()
+                    .addOnSuccessListener(sellerDoc -> {
+                        if (sellerDoc.exists()) {
+                            Log.d("CHAT_DEBUG", "Starting chat - Customer: " + currentUserId + ", Seller: " + product.sellerId);
+                            Intent intent = new Intent(this, ChatActivity.class);
+                            intent.putExtra("otherUserId", product.sellerId);
+                            intent.putExtra("productId", product.id);
+                            intent.putExtra("isCustomerInitiator", true);
+                            startActivity(intent);
+                        } else {
+                            Toast.makeText(this, "Seller account not found", Toast.LENGTH_SHORT).show();
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e("CHAT_DEBUG", "Error finding seller", e);
+                        Toast.makeText(this, "Failed to start chat", Toast.LENGTH_SHORT).show();
+                    });
             } else {
                 Toast.makeText(this, "Seller information not available", Toast.LENGTH_SHORT).show();
             }

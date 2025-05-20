@@ -29,6 +29,13 @@ public class HomeFragment extends Fragment implements ThriftShopAdapter.OnShopCl
         // Initialize Firestore
         db = FirebaseFirestore.getInstance();
 
+        // Chat icon click listener
+        View chatIcon = view.findViewById(R.id.message_icon);
+        chatIcon.setOnClickListener(v -> {
+            Intent intent = new Intent(getActivity(), CustomerChatListActivity.class);
+            startActivity(intent);
+        });
+
         // Initialize RecyclerView for thrift shops
         recyclerShops = view.findViewById(R.id.recyclerShops);
         recyclerShops.setLayoutManager(new LinearLayoutManager(getContext()));

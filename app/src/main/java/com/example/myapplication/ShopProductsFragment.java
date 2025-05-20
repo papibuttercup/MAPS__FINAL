@@ -8,8 +8,10 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.ImageButton;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -41,6 +43,7 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
     private String selectedCategory = null;
     private TextView shopTitle;
     private Spinner mainCategorySpinner;
+    private ImageButton btnMessageShop;
 
     public static ShopProductsFragment newInstance(String sellerId, String shopName) {
         ShopProductsFragment fragment = new ShopProductsFragment();
@@ -62,6 +65,19 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
         db = FirebaseFirestore.getInstance();
         shopTitle = view.findViewById(R.id.shopTitle);
         shopTitle.setText(shopName);
+        btnMessageShop = view.findViewById(R.id.btnMessageShop);
+        btnMessageShop.setOnClickListener(v -> {
+            String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+            if (currentUserId != null && sellerId != null && !currentUserId.equals(sellerId)) {
+                Intent intent = new Intent(getActivity(), ChatActivity.class);
+                intent.putExtra("otherUserId", sellerId);
+                startActivity(intent);
+            } else if (currentUserId != null && currentUserId.equals(sellerId)) {
+                Toast.makeText(getContext(), "You cannot message your own shop.", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(getContext(), "Unable to start chat.", Toast.LENGTH_SHORT).show();
+            }
+        });
         mainCategorySpinner = view.findViewById(R.id.mainCategorySpinner);
         subcategoryRecyclerView = view.findViewById(R.id.subcategoryRecyclerView);
         productRecyclerView = view.findViewById(R.id.productRecyclerView);

@@ -6,15 +6,32 @@
     android:background="@color/background"
     android:padding="16dp">
 
-    <TextView
-        android:id="@+id/shopTitle"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Shop Name"
-        android:textStyle="bold"
-        android:textSize="22sp"
-        android:textColor="@color/black"
-        android:layout_marginBottom="12dp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+
+        <TextView
+            android:id="@+id/shopTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Shop Name"
+            android:textStyle="bold"
+            android:textSize="22sp"
+            android:textColor="@color/black" />
+
+        <ImageButton
+            android:id="@+id/btnMessageShop"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_message"
+            android:contentDescription="Message Shop"
+            android:layout_marginStart="8dp" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/categoryLabel"
