@@ -15,10 +15,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.ArrayList;
 import java.util.List;
-import android.app.AlertDialog;
-import android.view.LayoutInflater;
 import android.widget.ImageButton;
-import android.widget.EditText;
 
 public class ProductDetailsActivity extends AppCompatActivity {
     private ViewPager2 viewPagerImages;
@@ -109,13 +106,37 @@ public class ProductDetailsActivity extends AppCompatActivity {
 
         btnBuyNow.setOnClickListener(v -> {
             if (product != null) {
-                showQuantityDialogAndBuy();
+                Intent intent = new Intent(ProductDetailsActivity.this, BuyNowActivity.class);
+                intent.putExtra("productId", product.id);
+                intent.putExtra("sellerId", product.sellerId);
+                intent.putExtra("productName", product.name);
+                intent.putExtra("productPrice", product.price);
+                intent.putExtra("productStock", product.stock != null ? product.stock : 0);
+                intent.putExtra("quantity", 1); // default quantity
+                startActivity(intent);
             }
         });
 
         btnAddToCart.setOnClickListener(v -> {
             if (product != null) {
-                showQuantityDialogAndAddToCart();
+                String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+                java.util.Map<String, Object> cartItem = new java.util.HashMap<>();
+                cartItem.put("productId", product.id);
+                cartItem.put("name", product.name);
+                cartItem.put("price", product.price);
+                cartItem.put("image", product.coverPhotoUri);
+                cartItem.put("quantity", 1); // default quantity
+                cartItem.put("sellerId", product.sellerId);
+                cartItem.put("sellerName", product.sellerName);
+                cartItem.put("stock", product.stock);
+                FirebaseFirestore.getInstance()
+                    .collection("users")
+                    .document(userId)
+                    .collection("cart")
+                    .document(product.id)
+                    .set(cartItem)
+                    .addOnSuccessListener(unused -> Toast.makeText(this, "Added to cart!", Toast.LENGTH_SHORT).show())
+                    .addOnFailureListener(e -> Toast.makeText(this, "Failed to add to cart", Toast.LENGTH_SHORT).show());
             }
         });
 
@@ -129,90 +150,4 @@ public class ProductDetailsActivity extends AppCompatActivity {
             }
         });
     }
-
-    private void showQuantityDialogAndAddToCart() {
-        int maxStock = product.stock != null ? product.stock.intValue() : 1;
-        int[] quantity = {1};
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_quantity_picker, null);
-        TextView txtDialogTitle = dialogView.findViewById(R.id.txtDialogTitle);
-        ImageButton btnMinus = dialogView.findViewById(R.id.btnMinus);
-        ImageButton btnPlus = dialogView.findViewById(R.id.btnPlus);
-        TextView txtQuantity = dialogView.findViewById(R.id.txtQuantity);
-        txtDialogTitle.setText("Select Quantity");
-        txtQuantity.setText(String.valueOf(quantity[0]));
-        btnMinus.setOnClickListener(v -> {
-            if (quantity[0] > 1) {
-                quantity[0]--;
-                txtQuantity.setText(String.valueOf(quantity[0]));
-            }
-        });
-        btnPlus.setOnClickListener(v -> {
-            if (quantity[0] < maxStock) {
-                quantity[0]++;
-                txtQuantity.setText(String.valueOf(quantity[0]));
-            }
-        });
-        builder.setView(dialogView)
-            .setPositiveButton("Add to Cart", (dialog, which) -> {
-                String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-                java.util.Map<String, Object> cartItem = new java.util.HashMap<>();
-                cartItem.put("productId", product.id);
-                cartItem.put("name", product.name);
-                cartItem.put("price", product.price);
-                cartItem.put("image", product.coverPhotoUri);
-                cartItem.put("quantity", quantity[0]);
-                cartItem.put("sellerId", product.sellerId);
-                cartItem.put("sellerName", product.sellerName);
-                cartItem.put("stock", product.stock);
-                FirebaseFirestore.getInstance()
-                    .collection("users")
-                    .document(userId)
-                    .collection("cart")
-                    .document(product.id)
-                    .set(cartItem)
-                    .addOnSuccessListener(unused -> Toast.makeText(this, "Added to cart!", Toast.LENGTH_SHORT).show())
-                    .addOnFailureListener(e -> Toast.makeText(this, "Failed to add to cart", Toast.LENGTH_SHORT).show());
-            })
-            .setNegativeButton("Cancel", null)
-            .show();
-    }
-
-    private void showQuantityDialogAndBuy() {
-        int maxStock = product.stock != null ? product.stock.intValue() : 1;
-        int[] quantity = {1};
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_quantity_picker, null);
-        TextView txtDialogTitle = dialogView.findViewById(R.id.txtDialogTitle);
-        ImageButton btnMinus = dialogView.findViewById(R.id.btnMinus);
-        ImageButton btnPlus = dialogView.findViewById(R.id.btnPlus);
-        TextView txtQuantity = dialogView.findViewById(R.id.txtQuantity);
-        txtDialogTitle.setText("Select Quantity");
-        txtQuantity.setText(String.valueOf(quantity[0]));
-        btnMinus.setOnClickListener(v -> {
-            if (quantity[0] > 1) {
-                quantity[0]--;
-                txtQuantity.setText(String.valueOf(quantity[0]));
-            }
-        });
-        btnPlus.setOnClickListener(v -> {
-            if (quantity[0] < maxStock) {
-                quantity[0]++;
-                txtQuantity.setText(String.valueOf(quantity[0]));
-            }
-        });
-        builder.setView(dialogView)
-            .setPositiveButton("Buy Now", (dialog, which) -> {
-                Intent intent = new Intent(ProductDetailsActivity.this, BuyNowActivity.class);
-                intent.putExtra("productId", product.id);
-                intent.putExtra("sellerId", product.sellerId);
-                intent.putExtra("productName", product.name);
-                intent.putExtra("productPrice", product.price);
-                intent.putExtra("productStock", product.stock != null ? product.stock : 0);
-                intent.putExtra("quantity", quantity[0]);
-                startActivity(intent);
-            })
-            .setNegativeButton("Cancel", null)
-            .show();
-    }
-} 
+}

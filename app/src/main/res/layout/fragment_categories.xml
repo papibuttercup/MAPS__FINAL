@@ -35,11 +35,6 @@
             android:clickable="false"
             android:cursorVisible="false"
             android:longClickable="false" />
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_cart"
-            android:contentDescription="Cart" />
     </LinearLayout>
 
     <!-- Category List -->

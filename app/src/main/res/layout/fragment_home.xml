@@ -46,14 +46,6 @@
             </LinearLayout>
 
             <ImageView
-                android:id="@+id/cart_icon"
-                android:layout_width="wrap_content"
-                android:layout_height="24dp"
-                android:layout_marginStart="16dp"
-                android:contentDescription="Shopping Cart"
-                android:src="@drawable/ic_cart" />
-
-            <ImageView
                 android:id="@+id/message_icon"
                 android:layout_width="24dp"
                 android:layout_height="24dp"

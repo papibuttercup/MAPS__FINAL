@@ -27,11 +27,6 @@
             android:textSize="18sp"
             android:gravity="center"
             android:textColor="#222" />
-        <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_cart"
-            android:contentDescription="Cart" />
     </LinearLayout>
 
     <!-- Category List -->
