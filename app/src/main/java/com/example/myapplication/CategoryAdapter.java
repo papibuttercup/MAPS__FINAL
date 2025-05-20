@@ -3,6 +3,7 @@ package com.example.myapplication;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
@@ -16,11 +17,13 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.ViewHo
     }
 
     private List<String> categories;
+    private List<Integer> icons;
     private OnCategoryClickListener listener;
     private int selectedPosition = 0;
 
-    public CategoryAdapter(List<String> categories, OnCategoryClickListener listener) {
+    public CategoryAdapter(List<String> categories, List<Integer> icons, OnCategoryClickListener listener) {
         this.categories = categories;
+        this.icons = icons;
         this.listener = listener;
     }
 
@@ -36,7 +39,9 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.ViewHo
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         String category = categories.get(position);
         holder.categoryLabel.setText(category);
-
+        if (icons != null && position < icons.size()) {
+            holder.categoryIcon.setImageResource(icons.get(position));
+        }
         // Highlight selected
         boolean isSelected = position == selectedPosition;
         holder.cardView.setCardBackgroundColor(
@@ -49,7 +54,6 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.ViewHo
                 ContextCompat.getColor(holder.itemView.getContext(), android.R.color.white) :
                 ContextCompat.getColor(holder.itemView.getContext(), android.R.color.black)
         );
-
         holder.itemView.setOnClickListener(v -> {
             int previous = selectedPosition;
             selectedPosition = holder.getAdapterPosition();
@@ -66,10 +70,12 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.ViewHo
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView categoryLabel;
+        ImageView categoryIcon;
         CardView cardView;
         ViewHolder(@NonNull View itemView) {
             super(itemView);
             categoryLabel = itemView.findViewById(R.id.categoryLabel);
+            categoryIcon = itemView.findViewById(R.id.categoryIcon);
             cardView = (CardView) itemView;
         }
     }
