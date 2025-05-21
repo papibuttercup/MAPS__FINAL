@@ -3,6 +3,7 @@ package com.example.myapplication;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -26,6 +27,8 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -69,6 +72,8 @@ import com.google.android.gms.tasks.Tasks;
 public class ListNewItemActivity extends AppCompatActivity {
     private static final int PICK_COVER_PHOTO_REQUEST = 1;
     private static final int PICK_IMAGES_REQUEST = 2;
+    private static final int MAX_IMAGE_DIMENSION = 1024; // Maximum width/height for compressed images
+    private static final int JPEG_QUALITY = 80; // JPEG compression quality (0-100)
 
     // UI Components
     private TextInputEditText productNameInput;
@@ -245,11 +250,18 @@ public class ListNewItemActivity extends AppCompatActivity {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     Uri selectedImage = result.getData().getData();
                     if (selectedImage != null) {
-                        coverPhotoUri = selectedImage;
-                        imgCoverPreview.setImageURI(selectedImage);
-                        imgCoverPreview.setVisibility(View.VISIBLE);
-                        productImageUris.clear(); // Clear previous images
-                        productImageUris.add(selectedImage); // Add cover photo as first image
+                        try {
+                            // Compress the cover photo before displaying
+                            Uri compressedUri = getCompressedImageUri(selectedImage);
+                            coverPhotoUri = selectedImage; // Keep original URI for upload
+                            imgCoverPreview.setImageURI(compressedUri);
+                            imgCoverPreview.setVisibility(View.VISIBLE);
+                            productImageUris.clear(); // Clear previous images
+                            productImageUris.add(selectedImage); // Add cover photo as first image
+                        } catch (IOException e) {
+                            Log.e("ListNewItemActivity", "Error compressing cover photo: " + e.getMessage());
+                            Toast.makeText(this, "Error processing image. Please try another one.", Toast.LENGTH_SHORT).show();
+                        }
                     }
                 }
             }
@@ -288,56 +300,99 @@ public class ListNewItemActivity extends AppCompatActivity {
         });
     }
 
+    private Bitmap compressImage(Uri imageUri) throws IOException {
+        // Get image dimensions
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+        BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri), null, options);
+        
+        // Calculate sample size for downsampling
+        int sampleSize = 1;
+        if (options.outHeight > MAX_IMAGE_DIMENSION || options.outWidth > MAX_IMAGE_DIMENSION) {
+            final int heightRatio = Math.round((float) options.outHeight / (float) MAX_IMAGE_DIMENSION);
+            final int widthRatio = Math.round((float) options.outWidth / (float) MAX_IMAGE_DIMENSION);
+            sampleSize = Math.max(heightRatio, widthRatio);
+        }
+        
+        // Decode image with calculated sample size
+        options.inJustDecodeBounds = false;
+        options.inSampleSize = sampleSize;
+        return BitmapFactory.decodeStream(getContentResolver().openInputStream(imageUri), null, options);
+    }
+
+    private Uri getCompressedImageUri(Uri originalUri) throws IOException {
+        Bitmap compressedBitmap = compressImage(originalUri);
+        
+        // Create a temporary file to store the compressed image
+        File tempFile = File.createTempFile("compressed_", ".jpg", getCacheDir());
+        FileOutputStream out = new FileOutputStream(tempFile);
+        
+        // Compress the bitmap to JPEG
+        compressedBitmap.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out);
+        out.close();
+        compressedBitmap.recycle();
+        
+        return Uri.fromFile(tempFile);
+    }
+
     private void addImagePreview(final Uri uri) {
-        // Create image preview container
-        FrameLayout imageContainer = new FrameLayout(this);
-        LinearLayout.LayoutParams containerParams = new LinearLayout.LayoutParams(
-            dpToPx(120), // width
-            dpToPx(120)  // height
-        );
-        containerParams.setMargins(dpToPx(8), 0, 0, 0);
-        imageContainer.setLayoutParams(containerParams);
+        try {
+            // Compress the image before displaying
+            Uri compressedUri = getCompressedImageUri(uri);
+            
+            // Create image preview container
+            FrameLayout imageContainer = new FrameLayout(this);
+            LinearLayout.LayoutParams containerParams = new LinearLayout.LayoutParams(
+                dpToPx(120), // width
+                dpToPx(120)  // height
+            );
+            containerParams.setMargins(dpToPx(8), 0, 0, 0);
+            imageContainer.setLayoutParams(containerParams);
 
-        // Create image view
-        ImageView imageView = new ImageView(this);
-        FrameLayout.LayoutParams imageParams = new FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
-        );
-        imageView.setLayoutParams(imageParams);
-        imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        imageView.setImageURI(uri);
-        imageView.setBackgroundResource(R.drawable.image_placeholder_background);
+            // Create image view
+            ImageView imageView = new ImageView(this);
+            FrameLayout.LayoutParams imageParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            );
+            imageView.setLayoutParams(imageParams);
+            imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            imageView.setImageURI(compressedUri);
+            imageView.setBackgroundResource(R.drawable.image_placeholder_background);
 
-        // Create delete button
-        ImageButton deleteButton = new ImageButton(this);
-        FrameLayout.LayoutParams deleteParams = new FrameLayout.LayoutParams(
-            dpToPx(24),
-            dpToPx(24)
-        );
-        deleteParams.gravity = Gravity.TOP | Gravity.END;
-        deleteParams.setMargins(0, dpToPx(4), dpToPx(4), 0);
-        deleteButton.setLayoutParams(deleteParams);
-        deleteButton.setImageResource(R.drawable.ic_delete);
-        deleteButton.setBackgroundResource(android.R.color.transparent);
-        deleteButton.setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4));
+            // Create delete button
+            ImageButton deleteButton = new ImageButton(this);
+            FrameLayout.LayoutParams deleteParams = new FrameLayout.LayoutParams(
+                dpToPx(24),
+                dpToPx(24)
+            );
+            deleteParams.gravity = Gravity.TOP | Gravity.END;
+            deleteParams.setMargins(0, dpToPx(4), dpToPx(4), 0);
+            deleteButton.setLayoutParams(deleteParams);
+            deleteButton.setImageResource(R.drawable.ic_delete);
+            deleteButton.setBackgroundResource(android.R.color.transparent);
+            deleteButton.setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4));
 
-        // Add click listener to delete button
-        deleteButton.setOnClickListener(v -> {
-            layoutImagePreviews.removeView(imageContainer);
-            productImageUris.remove(uri);
-            if (uri.equals(coverPhotoUri)) {
-                coverPhotoUri = null;
-                imgCoverPreview.setVisibility(View.GONE);
-            }
-        });
+            // Add click listener to delete button
+            deleteButton.setOnClickListener(v -> {
+                layoutImagePreviews.removeView(imageContainer);
+                productImageUris.remove(uri);
+                if (uri.equals(coverPhotoUri)) {
+                    coverPhotoUri = null;
+                    imgCoverPreview.setVisibility(View.GONE);
+                }
+            });
 
-        // Add views to container
-        imageContainer.addView(imageView);
-        imageContainer.addView(deleteButton);
+            // Add views to container
+            imageContainer.addView(imageView);
+            imageContainer.addView(deleteButton);
 
-        // Add container to preview layout
-        layoutImagePreviews.addView(imageContainer);
+            // Add container to preview layout
+            layoutImagePreviews.addView(imageContainer);
+        } catch (IOException e) {
+            Log.e("ListNewItemActivity", "Error compressing image: " + e.getMessage());
+            Toast.makeText(this, "Error processing image. Please try another one.", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private int dpToPx(int dp) {
@@ -475,6 +530,9 @@ public class ListNewItemActivity extends AppCompatActivity {
 
         for (Uri imageUri : images) {
             try {
+                // Compress image before upload
+                Uri compressedUri = getCompressedImageUri(imageUri);
+                
                 String imageName = "products/" + userId + "/" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString();
                 StorageReference imageRef = storageRef.child(imageName);
 
@@ -484,7 +542,7 @@ public class ListNewItemActivity extends AppCompatActivity {
                     .setCacheControl("public,max-age=31536000") // Cache for 1 year
                     .build();
 
-                UploadTask uploadTask = imageRef.putFile(imageUri, metadata);
+                UploadTask uploadTask = imageRef.putFile(compressedUri, metadata);
 
                 // Add progress listener
                 uploadTask.addOnProgressListener(taskSnapshot -> {

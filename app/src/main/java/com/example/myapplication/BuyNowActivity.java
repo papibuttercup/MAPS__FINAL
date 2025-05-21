@@ -39,6 +39,7 @@ import java.util.HashSet;
 import java.util.Set;
 import com.google.android.material.card.MaterialCardView;
 import android.widget.LinearLayout;
+import com.google.firebase.firestore.FieldValue;
 
 public class BuyNowActivity extends AppCompatActivity {
     private static final String TAG = "BuyNowActivity";
@@ -574,19 +575,15 @@ public class BuyNowActivity extends AppCompatActivity {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser == null) {
             Toast.makeText(this, "User not authenticated. Please log in again.", Toast.LENGTH_SHORT).show();
-            // Optionally redirect to login
-            // Intent intent = new Intent(this, LoginActivity.class);
-            // startActivity(intent);
             finish();
             return;
         }
         String currentUserId = currentUser.getUid();
+        Log.d(TAG, "Processing order for user: " + currentUserId);
         
-        String orderId = FirebaseDatabase.getInstance().getReference("orders").push().getKey();
-        
+        // First, create the order document with all required fields
         Map<String, Object> orderData = new HashMap<>();
-        orderData.put("orderId", orderId);
-        orderData.put("userId", userId);
+        orderData.put("customerId", currentUserId);
         orderData.put("productId", productId);
         orderData.put("sellerId", sellerId);
         orderData.put("productName", productName);
@@ -594,91 +591,149 @@ public class BuyNowActivity extends AppCompatActivity {
         orderData.put("quantity", selectedQuantity);
         orderData.put("selectedColor", selectedColor);
         orderData.put("selectedSize", selectedSize);
-        orderData.put("totalAmount", productPrice * selectedQuantity);
-        orderData.put("customerId", currentUserId);
+        orderData.put("totalPrice", productPrice * selectedQuantity);
         orderData.put("additionalDetails", etAdditionalDetails.getText().toString());
-        orderData.put("timestamp", System.currentTimeMillis());
-        orderData.put("status", "Pending");
-        
-        // Start transaction to update stock and create order
-        FirebaseFirestore.getInstance().runTransaction(transaction -> {
-            // Get current product data
-            DocumentSnapshot productDoc = transaction.get(
-                FirebaseFirestore.getInstance().collection("products").document(productId)
-            );
-            
-            if (!productDoc.exists()) {
-                throw new FirebaseFirestoreException("Product not found", 
-                    FirebaseFirestoreException.Code.NOT_FOUND);
-            }
-            
-            // Get current stock entries
-            List<Map<String, Object>> stockEntries = 
-                (List<Map<String, Object>>) productDoc.get("stockEntries");
-            if (stockEntries == null) {
-                throw new FirebaseFirestoreException("No stock entries found", 
-                    FirebaseFirestoreException.Code.NOT_FOUND);
-            }
-            
-            // Find and update the matching stock entry
-            boolean stockUpdated = false;
-            for (Map<String, Object> entry : stockEntries) {
-                String color = (String) entry.get("color");
-                String size = (String) entry.get("size");
-                if (color.equals(selectedColor) && size.equals(selectedSize)) {
-                    int currentStock = ((Long) entry.get("stock")).intValue();
-                    if (currentStock < selectedQuantity) {
-                        throw new FirebaseFirestoreException("Insufficient stock", 
-                            FirebaseFirestoreException.Code.FAILED_PRECONDITION);
+        orderData.put("timestamp", com.google.firebase.Timestamp.now());
+        orderData.put("status", "pending"); // Must be lowercase 'pending' to match rules
+        orderData.put("customerName", etName.getText().toString());
+        orderData.put("customerPhone", etPhone.getText().toString());
+        orderData.put("deliveryAddress", etAddress.getText().toString() + ", " + selectedBarangay);
+
+        Log.d(TAG, "Creating order with data: " + orderData.toString());
+
+        // Create the order first
+        db.collection("orders").add(orderData)
+            .addOnSuccessListener(documentReference -> {
+                Log.d(TAG, "Order created successfully with ID: " + documentReference.getId());
+                // After order is created successfully, update the stock entries
+                updateProductStockEntries(documentReference.getId());
+            })
+            .addOnFailureListener(e -> {
+                String errorMessage = "Failed to place order: ";
+                Log.e(TAG, "Error creating order", e);
+                if (e instanceof FirebaseFirestoreException) {
+                    FirebaseFirestoreException fe = (FirebaseFirestoreException) e;
+                    Log.e(TAG, "Firestore error code: " + fe.getCode());
+                    switch (fe.getCode()) {
+                        case PERMISSION_DENIED:
+                            errorMessage += "Permission denied. Please make sure you're logged in and try again.";
+                            // Try to refresh the auth token
+                            currentUser.getIdToken(true)
+                                .addOnCompleteListener(task -> {
+                                    if (task.isSuccessful()) {
+                                        Log.d(TAG, "Auth token refreshed successfully");
+                                        Toast.makeText(this, "Please try placing the order again", Toast.LENGTH_SHORT).show();
+                                    } else {
+                                        Log.e(TAG, "Failed to refresh auth token", task.getException());
+                                        Toast.makeText(this, "Please log out and log in again", Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            break;
+                        case INVALID_ARGUMENT:
+                            errorMessage += "Invalid order data. Please check all fields.";
+                            break;
+                        default:
+                            errorMessage += e.getMessage();
                     }
-                    entry.put("stock", currentStock - selectedQuantity);
-                    stockUpdated = true;
-                    break;
+                } else {
+                    errorMessage += e.getMessage();
                 }
-            }
-            
-            if (!stockUpdated) {
-                throw new FirebaseFirestoreException("Selected combination not found", 
-                    FirebaseFirestoreException.Code.NOT_FOUND);
-            }
-            
-            // Update product stock entries
-            transaction.update(
-                FirebaseFirestore.getInstance().collection("products").document(productId),
-                "stockEntries", stockEntries
-            );
-            
-            // Create order
-            transaction.set(
-                FirebaseFirestore.getInstance().collection("orders").document(orderId),
-                orderData
-            );
-            
-            return null;
-        })
-        .addOnSuccessListener(aVoid -> {
-            Toast.makeText(this, "Order placed successfully", Toast.LENGTH_SHORT).show();
-            finish();
-        })
-        .addOnFailureListener(e -> {
-            String errorMessage = "Failed to place order: ";
-            if (e instanceof FirebaseFirestoreException) {
-                FirebaseFirestoreException fe = (FirebaseFirestoreException) e;
-                switch (fe.getCode()) {
-                    case NOT_FOUND:
-                        errorMessage += "Product or stock entry not found";
-                        break;
-                    case FAILED_PRECONDITION:
-                        errorMessage += "Insufficient stock";
-                        break;
-                    default:
-                        errorMessage += e.getMessage();
+                Toast.makeText(this, errorMessage, Toast.LENGTH_SHORT).show();
+            });
+    }
+
+    private void updateProductStockEntries(String orderId) {
+        Log.d(TAG, "Updating stock for product: " + productId);
+        // Get the current product document
+        db.collection("products").document(productId)
+            .get()
+            .addOnSuccessListener(documentSnapshot -> {
+                if (!documentSnapshot.exists()) {
+                    Log.e(TAG, "Product document does not exist: " + productId);
+                    markOrderAsFailed(orderId, "Product no longer exists");
+                    return;
                 }
-            } else {
-                errorMessage += e.getMessage();
-            }
-            Toast.makeText(this, errorMessage, Toast.LENGTH_SHORT).show();
-        });
+
+                List<Map<String, Object>> currentStockEntries = 
+                    (List<Map<String, Object>>) documentSnapshot.get("stockEntries");
+                
+                if (currentStockEntries == null) {
+                    Log.e(TAG, "Stock entries not found for product: " + productId);
+                    markOrderAsFailed(orderId, "Product stock information not found");
+                    return;
+                }
+
+                // Find and update the matching stock entry
+                boolean stockUpdated = false;
+                for (Map<String, Object> entry : currentStockEntries) {
+                    String entryColor = (String) entry.get("color");
+                    String entrySize = (String) entry.get("size");
+                    if (selectedColor.equals(entryColor) && selectedSize.equals(entrySize)) {
+                        Long currentStock = (Long) entry.get("stock");
+                        if (currentStock == null || currentStock < selectedQuantity) {
+                            Log.e(TAG, "Insufficient stock for product: " + productId + ", color: " + selectedColor + ", size: " + selectedSize);
+                            markOrderAsFailed(orderId, "Insufficient stock");
+                            return;
+                        }
+                        entry.put("stock", currentStock - selectedQuantity);
+                        stockUpdated = true;
+                        break;
+                    }
+                }
+
+                if (!stockUpdated) {
+                    Log.e(TAG, "Stock entry not found for product: " + productId + ", color: " + selectedColor + ", size: " + selectedSize);
+                    markOrderAsFailed(orderId, "Selected combination not found in stock");
+                    return;
+                }
+
+                // Update the stockEntries in the product document
+                Map<String, Object> updateData = new HashMap<>();
+                updateData.put("stockEntries", currentStockEntries);
+
+                Log.d(TAG, "Updating product stock with data: " + updateData.toString());
+
+                db.collection("products").document(productId)
+                    .update(updateData)
+                    .addOnSuccessListener(aVoid -> {
+                        Log.d(TAG, "Stock updated successfully for product: " + productId);
+                        Toast.makeText(this, "Order placed successfully", Toast.LENGTH_SHORT).show();
+                        finish();
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error updating stock for product: " + productId, e);
+                        if (e instanceof FirebaseFirestoreException) {
+                            FirebaseFirestoreException fe = (FirebaseFirestoreException) e;
+                            Log.e(TAG, "Firestore error code: " + fe.getCode());
+                        }
+                        markOrderAsFailed(orderId, "Failed to update stock: " + e.getMessage());
+                    });
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "Error accessing product information: " + productId, e);
+                if (e instanceof FirebaseFirestoreException) {
+                    FirebaseFirestoreException fe = (FirebaseFirestoreException) e;
+                    Log.e(TAG, "Firestore error code: " + fe.getCode());
+                }
+                markOrderAsFailed(orderId, "Error accessing product information: " + e.getMessage());
+            });
+    }
+
+    private void markOrderAsFailed(String orderId, String reason) {
+        Map<String, Object> updateData = new HashMap<>();
+        updateData.put("status", "failed");
+        updateData.put("failureReason", reason);
+
+        db.collection("orders").document(orderId)
+            .update(updateData)
+            .addOnSuccessListener(aVoid -> {
+                Toast.makeText(this, "Order failed: " + reason, Toast.LENGTH_SHORT).show();
+                finish();
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(this, "Error updating order status: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                finish();
+            });
     }
 
     private void updateTotalPrice() {
