@@ -19,8 +19,11 @@ import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
 import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.annotations.Marker
 import org.maplibre.android.annotations.MarkerOptions
 import android.util.Log
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.ActivityResultLauncher
 
 class SellerAccountActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySellerAccountBinding
@@ -33,6 +36,9 @@ class SellerAccountActivity : AppCompatActivity() {
     private var miniMapView: MapView? = null
     private var miniMapLibreMap: MapLibreMap? = null
     private var progressDialog: AlertDialog? = null
+    private val markers = mutableListOf<Marker>()
+    private lateinit var locationPickerLauncher: ActivityResultLauncher<Intent>
+    private lateinit var imagePickerLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,8 +49,26 @@ class SellerAccountActivity : AppCompatActivity() {
         db = FirebaseFirestore.getInstance()
         auth = FirebaseAuth.getInstance()
 
+        // Initialize map view
         miniMapView = binding.miniMapView
         miniMapView?.onCreate(savedInstanceState)
+
+        // Initialize activity result launchers
+        locationPickerLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == RESULT_OK) {
+                handleLocationPickerResult(result.data)
+            }
+        }
+
+        imagePickerLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == RESULT_OK) {
+                handleImagePickerResult(result.data)
+            }
+        }
 
         setupToolbar()
         loadUserData()
@@ -116,15 +140,12 @@ class SellerAccountActivity : AppCompatActivity() {
     private fun setupButtons() {
         // Shop Location Button
         binding.btnIdentifyLocation.setOnClickListener {
-            val intent = Intent(this, Maps::class.java)
-            intent.putExtra("locationName", "Shop Location")
-            startActivityForResult(intent, 200)
+            startLocationPicker()
         }
 
         // Set Cover Photo Button
         binding.btnSetCoverPhoto.setOnClickListener {
-            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-            startActivityForResult(intent, PICK_COVER_PHOTO_REQUEST)
+            startImagePicker()
         }
 
         // Delete Cover Photo Button
@@ -224,12 +245,10 @@ class SellerAccountActivity : AppCompatActivity() {
             miniMapLibreMap = map
             map.setStyle(Style.Builder().fromUri(styleUrl)) { style ->
                 // Clear any existing markers
-                map.markers.forEach { map.removeMarker(it) }
+                removeMarkers()
                 // Add new marker
                 val location = LatLng(latitude, longitude)
-                map.addMarker(MarkerOptions()
-                    .position(location)
-                    .title("Shop Location"))
+                addMarkerToMap(location, "Shop Location")
                 // Set camera position with animation
                 map.animateCamera(
                     org.maplibre.android.camera.CameraUpdateFactory.newLatLngZoom(
@@ -256,50 +275,77 @@ class SellerAccountActivity : AppCompatActivity() {
         progressDialog = null
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (resultCode == Activity.RESULT_OK) {
-            when (requestCode) {
-                PICK_COVER_PHOTO_REQUEST -> {
-                    data?.data?.let { uri ->
-                        coverPhotoUri = uri
-                        binding.ivCoverPhoto.setImageURI(uri)
-                        binding.btnDeleteCoverPhoto.visibility = android.view.View.VISIBLE
-                        binding.btnSetCoverPhoto.text = "Change Cover Photo"
-                    }
-                }
-                200 -> {
-                    val latitude = data?.getDoubleExtra("latitude", 0.0) ?: 0.0
-                    val longitude = data?.getDoubleExtra("longitude", 0.0) ?: 0.0
-                    val locationName = data?.getStringExtra("locationName") ?: "Location"
-                    
-                    if (latitude != 0.0 && longitude != 0.0) {
-                        // Immediately update UI with new location
-                        binding.tvCurrentLocation.text = "$locationName (Location set)"
-                        binding.btnDeleteLocation.visibility = android.view.View.VISIBLE
-                        binding.btnIdentifyLocation.visibility = android.view.View.GONE
-                        binding.miniMapView.visibility = android.view.View.VISIBLE
-                        showMiniMapLibrePreview(latitude, longitude)
-                        
-                        // Save location to Firestore
-                        val userId = auth.currentUser?.uid ?: return
-                        db.collection("sellers").document(userId)
-                            .update(
-                                mapOf(
-                                    "latitude" to latitude,
-                                    "longitude" to longitude,
-                                    "locationName" to locationName
-                                )
-                            )
-                            .addOnSuccessListener {
-                                Toast.makeText(this, "Location saved successfully", Toast.LENGTH_SHORT).show()
-                            }
-                            .addOnFailureListener { e ->
-                                Toast.makeText(this, "Failed to save location: ${e.message}", Toast.LENGTH_SHORT).show()
-                            }
-                    }
-                }
+    private fun addMarkerToMap(latLng: LatLng, title: String) {
+        miniMapLibreMap?.let { map ->
+            val marker = map.addMarker(
+                MarkerOptions()
+                    .position(latLng)
+                    .title(title)
+            )
+            marker?.let { markers.add(it) }
+        }
+    }
+
+    private fun removeMarkers() {
+        miniMapLibreMap?.let { map ->
+            markers.forEach { marker ->
+                map.removeMarker(marker)
             }
+            markers.clear()
+        }
+    }
+
+    private fun startLocationPicker() {
+        val intent = Intent(this, Maps::class.java)
+        intent.putExtra("locationName", "Shop Location")
+        locationPickerLauncher.launch(intent)
+    }
+
+    private fun startImagePicker() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT)
+        intent.type = "image/*"
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+        imagePickerLauncher.launch(intent)
+    }
+
+    private fun handleLocationPickerResult(data: Intent?) {
+        val latitude = data?.getDoubleExtra("latitude", 0.0) ?: 0.0
+        val longitude = data?.getDoubleExtra("longitude", 0.0) ?: 0.0
+        val locationName = data?.getStringExtra("locationName") ?: "Location"
+        
+        if (latitude != 0.0 && longitude != 0.0) {
+            // Immediately update UI with new location
+            binding.tvCurrentLocation.text = "$locationName (Location set)"
+            binding.btnDeleteLocation.visibility = android.view.View.VISIBLE
+            binding.btnIdentifyLocation.visibility = android.view.View.GONE
+            binding.miniMapView.visibility = android.view.View.VISIBLE
+            showMiniMapLibrePreview(latitude, longitude)
+            
+            // Save location to Firestore
+            val userId = auth.currentUser?.uid ?: return
+            db.collection("sellers").document(userId)
+                .update(
+                    mapOf(
+                        "latitude" to latitude,
+                        "longitude" to longitude,
+                        "locationName" to locationName
+                    )
+                )
+                .addOnSuccessListener {
+                    Toast.makeText(this, "Location saved successfully", Toast.LENGTH_SHORT).show()
+                }
+                .addOnFailureListener { e ->
+                    Toast.makeText(this, "Failed to save location: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+        }
+    }
+
+    private fun handleImagePickerResult(data: Intent?) {
+        data?.data?.let { uri ->
+            coverPhotoUri = uri
+            binding.ivCoverPhoto.setImageURI(uri)
+            binding.btnDeleteCoverPhoto.visibility = android.view.View.VISIBLE
+            binding.btnSetCoverPhoto.text = "Change Cover Photo"
         }
     }
 
@@ -378,6 +424,8 @@ class SellerAccountActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        miniMapView?.onDestroy()
+        removeMarkers()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

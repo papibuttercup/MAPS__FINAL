@@ -12,11 +12,12 @@
         android:indeterminate="true" />
 
     <TextView
-        android:id="@+id/message"
+        android:id="@+id/progressText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="Loading..."
-        android:textSize="16sp" />
+        android:layout_marginTop="16dp"
+        android:text="Please wait..."
+        android:textSize="16sp"
+        android:gravity="center" />
 
 </LinearLayout> 

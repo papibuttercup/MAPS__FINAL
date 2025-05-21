@@ -13,6 +13,7 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -22,7 +23,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.ArrayList;
 import java.util.List;
 import android.widget.EditText;
-import android.app.ProgressDialog;
+import android.widget.TextView;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import androidx.recyclerview.widget.RecyclerView;
@@ -45,7 +46,7 @@ public class EditProductActivity extends AppCompatActivity {
     private List<String> productImageUris = new ArrayList<>();
     private Uri newCoverPhotoUri = null;
     private EditText etProductName;
-    private ProgressDialog progressDialog;
+    private AlertDialog progressDialog;
     private Button btnSaveProduct;
     private RecyclerView rvProductImages;
     private ProductImagesAdapter productImagesAdapter;
@@ -144,8 +145,12 @@ public class EditProductActivity extends AppCompatActivity {
 
         btnSaveProduct.setOnClickListener(v -> saveProductChanges());
 
-        progressDialog = new ProgressDialog(this);
-        progressDialog.setMessage("Saving...");
+        // Initialize progress dialog
+        View progressView = getLayoutInflater().inflate(R.layout.progress_dialog, null);
+        progressDialog = new AlertDialog.Builder(this)
+            .setView(progressView)
+            .setCancelable(false)
+            .create();
 
         spinnerStockColorEdit = findViewById(R.id.spinnerStockColorEdit);
         spinnerStockSizeEdit = findViewById(R.id.spinnerStockSizeEdit);
@@ -338,7 +343,7 @@ public class EditProductActivity extends AppCompatActivity {
     }
 
     private void saveProductChanges() {
-        progressDialog.show();
+        showProgress("Saving...");
         List<java.util.concurrent.CompletableFuture<String>> uploadFutures = new ArrayList<>();
         // Cover photo
         if (newCoverPhotoUri != null) {
@@ -387,17 +392,17 @@ public class EditProductActivity extends AppCompatActivity {
                                 "colors", new ArrayList<>(colorSet),
                                 "sizes", new ArrayList<>(sizeSet))
                         .addOnSuccessListener(unused -> runOnUiThread(() -> {
-                            progressDialog.dismiss();
+                            hideProgress();
                             Toast.makeText(this, "Product updated!", Toast.LENGTH_SHORT).show();
                             finish();
                         }))
                         .addOnFailureListener(e -> runOnUiThread(() -> {
-                            progressDialog.dismiss();
+                            hideProgress();
                             Toast.makeText(this, "Failed to update product: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                         }));
                 } catch (Exception e) {
                     runOnUiThread(() -> {
-                        progressDialog.dismiss();
+                        hideProgress();
                         Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     });
                 }
@@ -497,6 +502,22 @@ public class EditProductActivity extends AppCompatActivity {
             public ViewHolder(View itemView) {
                 super(itemView);
             }
+        }
+    }
+
+    private void showProgress(String message) {
+        if (progressDialog != null) {
+            TextView messageView = progressDialog.findViewById(R.id.progressText);
+            if (messageView != null) {
+                messageView.setText(message);
+            }
+            progressDialog.show();
+        }
+    }
+
+    private void hideProgress() {
+        if (progressDialog != null && progressDialog.isShowing()) {
+            progressDialog.dismiss();
         }
     }
 } 

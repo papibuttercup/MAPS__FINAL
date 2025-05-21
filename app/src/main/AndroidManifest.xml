@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:targetApi="31">
+    tools:targetApi="31"
+    package="com.example.myapplication">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -151,5 +152,11 @@
             android:theme="@style/Theme.MyApplication" />
 
         <activity android:name=".CustomerChatListActivity" />
+
+        <activity
+            android:name=".CustomerOrdersActivity"
+            android:exported="false"
+            android:label="My Orders"
+            android:parentActivityName=".LandingActivity" />
     </application>
 </manifest>

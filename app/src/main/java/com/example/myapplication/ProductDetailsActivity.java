@@ -20,6 +20,12 @@ import android.util.Log;
 import android.widget.LinearLayout;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.Color;
+import com.google.android.material.chip.Chip;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashMap;
+import androidx.core.content.ContextCompat;
 
 public class ProductDetailsActivity extends AppCompatActivity {
     private ViewPager2 viewPagerImages;
@@ -40,6 +46,7 @@ public class ProductDetailsActivity extends AppCompatActivity {
     private int selectedSizeIndex = -1;
     private List<ProductDetailsActivity.StockEntry> stockEntries = new ArrayList<>();
     private List<String> availableSizes = new ArrayList<>();
+    private List<String> availableColors = new ArrayList<>();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -112,15 +119,11 @@ public class ProductDetailsActivity extends AppCompatActivity {
                     int soldCount = 300;
                     txtRating.setText("★ " + rating);
                     txtSold.setText(soldCount + " Sold");
-                    showProductColors(product.colors);
-                    // Show sizes for the first color by default
-                    if (product.sizes != null && !product.sizes.isEmpty()) {
-                        showProductSizes(product.sizes);
-                    }
-                    // Load stockEntries if available
+                    // Load stockEntries if available and populate colors from there
                     if (doc.contains("stockEntries")) {
                         List<?> stockEntryList = (List<?>) doc.get("stockEntries");
                         stockEntries.clear();
+                        Set<String> uniqueColorsWithStock = new HashSet<>();
                         for (Object obj : stockEntryList) {
                             if (obj instanceof java.util.Map) {
                                 java.util.Map map = (java.util.Map) obj;
@@ -128,8 +131,23 @@ public class ProductDetailsActivity extends AppCompatActivity {
                                 String size = map.get("size") != null ? map.get("size").toString() : "";
                                 int entryStock = map.get("stock") != null ? Integer.parseInt(map.get("stock").toString()) : 0;
                                 stockEntries.add(new StockEntry(color, size, entryStock));
+                                if (!color.isEmpty() && entryStock > 0) {
+                                    uniqueColorsWithStock.add(color.trim());
+                                }
                             }
                         }
+                        availableColors.clear();
+                        availableColors.addAll(uniqueColorsWithStock);
+                        showProductColors(availableColors); // Use unique colors from stock entries with stock
+                    } else {
+                        // If no stock entries, show no colors available
+                        stockEntries.clear();
+                        availableColors.clear();
+                        showProductColors(availableColors);
+                    }
+                    // Show sizes for the first color by default
+                    if (product.sizes != null && !product.sizes.isEmpty()) {
+                        showProductSizes(product.sizes);
                     }
                     txtSellerName.setOnClickListener(v -> {
                         if (product != null && product.sellerId != null && product.sellerName != null) {
@@ -170,52 +188,92 @@ public class ProductDetailsActivity extends AppCompatActivity {
             });
 
         btnBuyNow.setOnClickListener(v -> {
-            if (product != null) {
-                Intent intent = new Intent(ProductDetailsActivity.this, BuyNowActivity.class);
+            if (selectedColorIndex == -1 || selectedSizeIndex == -1) {
+                Toast.makeText(this, "Please select both color and size", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            // Get selected color and size
+            String selectedColor = null;
+            String selectedSize = null;
+
+            if (selectedColorIndex >= 0 && selectedColorIndex < availableColors.size()) {
+                selectedColor = availableColors.get(selectedColorIndex);
+            } else {
+                Toast.makeText(this, "Error getting selected color. Please re-select.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (selectedSizeIndex >= 0 && selectedSizeIndex < availableSizes.size()) {
+                selectedSize = availableSizes.get(selectedSizeIndex);
+            } else {
+                Toast.makeText(this, "Error getting selected size. Please re-select.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            // Find matching stock entry
+            StockEntry selectedEntry = null;
+            for (StockEntry entry : stockEntries) {
+                if (entry.color.equals(selectedColor) && entry.size.equals(selectedSize)) {
+                    selectedEntry = entry;
+                    break;
+                }
+            }
+            
+            if (selectedEntry != null && selectedEntry.stock > 0) {
+                // Start BuyNowActivity with selected options
+                Intent intent = new Intent(this, BuyNowActivity.class);
                 intent.putExtra("productId", product.id);
                 intent.putExtra("sellerId", product.sellerId);
                 intent.putExtra("productName", product.name);
                 intent.putExtra("productPrice", product.price);
-                intent.putExtra("productStock", product.stock != null ? product.stock : 0);
-                intent.putExtra("quantity", 1); // default quantity
-                // Add selected color and size
-                if (selectedColorIndex >= 0 && product.colors != null && selectedColorIndex < product.colors.size()) {
-                    intent.putExtra("color", product.colors.get(selectedColorIndex));
-                }
-                if (selectedSizeIndex >= 0 && product.sizes != null && selectedSizeIndex < product.sizes.size()) {
-                    intent.putExtra("size", product.sizes.get(selectedSizeIndex));
-                }
+                intent.putExtra("selectedColor", selectedColor);
+                intent.putExtra("selectedSize", selectedSize);
+                intent.putExtra("availableStock", selectedEntry.stock);
                 startActivity(intent);
+            } else {
+                Toast.makeText(this, "Selected combination is out of stock", Toast.LENGTH_SHORT).show();
             }
         });
 
         btnAddToCart.setOnClickListener(v -> {
-            if (product != null) {
-                String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-                java.util.Map<String, Object> cartItem = new java.util.HashMap<>();
-                cartItem.put("productId", product.id);
-                cartItem.put("name", product.name);
-                cartItem.put("price", product.price);
-                cartItem.put("image", product.coverPhotoUri);
-                cartItem.put("quantity", 1); // default quantity
-                cartItem.put("sellerId", product.sellerId);
-                cartItem.put("sellerName", product.sellerName);
-                cartItem.put("stock", product.stock);
-                // Add selected color and size
-                if (selectedColorIndex >= 0 && product.colors != null && selectedColorIndex < product.colors.size()) {
-                    cartItem.put("color", product.colors.get(selectedColorIndex));
+            if (selectedColorIndex == -1 || selectedSizeIndex == -1) {
+                Toast.makeText(this, "Please select both color and size", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            // Get selected color and size
+            String selectedColor = null;
+            String selectedSize = null;
+
+            if (selectedColorIndex >= 0 && selectedColorIndex < availableColors.size()) {
+                selectedColor = availableColors.get(selectedColorIndex);
+            } else {
+                Toast.makeText(this, "Error getting selected color. Please re-select.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (selectedSizeIndex >= 0 && selectedSizeIndex < availableSizes.size()) {
+                selectedSize = availableSizes.get(selectedSizeIndex);
+            } else {
+                Toast.makeText(this, "Error getting selected size. Please re-select.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            // Find matching stock entry
+            StockEntry selectedEntry = null;
+            for (StockEntry entry : stockEntries) {
+                if (entry.color.equals(selectedColor) && entry.size.equals(selectedSize)) {
+                    selectedEntry = entry;
+                    break;
                 }
-                if (selectedSizeIndex >= 0 && product.sizes != null && selectedSizeIndex < product.sizes.size()) {
-                    cartItem.put("size", product.sizes.get(selectedSizeIndex));
-                }
-                db
-                    .collection("users")
-                    .document(userId)
-                    .collection("cart")
-                    .document(product.id)
-                    .set(cartItem)
-                    .addOnSuccessListener(unused -> Toast.makeText(this, "Added to cart!", Toast.LENGTH_SHORT).show())
-                    .addOnFailureListener(e -> Toast.makeText(this, "Failed to add to cart", Toast.LENGTH_SHORT).show());
+            }
+            
+            if (selectedEntry != null && selectedEntry.stock > 0) {
+                // Add to cart logic here
+                addToCart(product.id, selectedColor, selectedSize);
+            } else {
+                Toast.makeText(this, "Selected combination is out of stock", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -245,13 +303,18 @@ public class ProductDetailsActivity extends AppCompatActivity {
                 Toast.makeText(this, "Seller information not available", Toast.LENGTH_SHORT).show();
             }
         });
+
+        // Setup color and size selection
+        setupColorSelection();
+        setupSizeSelection();
+        setupBuyButtons();
     }
 
     private void showProductColors(List<String> colors) {
         layoutDetailColors.removeAllViews();
-        txtSelectedColor.setVisibility(View.VISIBLE); // Always show label
+        txtSelectedColor.setVisibility(View.VISIBLE);
+        
         if (colors == null || colors.isEmpty()) {
-            // Show disabled color UI or message
             txtSelectedColor.setText("Color: -");
             View dot = new View(this);
             int size = (int) (28 * getResources().getDisplayMetrics().density);
@@ -263,34 +326,11 @@ public class ProductDetailsActivity extends AppCompatActivity {
             bg.setColor(Color.LTGRAY);
             bg.setStroke(1, Color.parseColor("#888888"));
             layoutDetailColors.addView(dot);
-            // Show size label and disabled size UI
-            txtSelectedSize.setVisibility(View.VISIBLE);
-            txtSelectedSize.setText("Size: -");
-            layoutDetailSizes.removeAllViews();
-            TextView sizeView = new TextView(this);
-            sizeView.setText("-");
-            sizeView.setTextSize(15);
-            sizeView.setPadding(32, 8, 32, 8);
-            sizeView.setBackgroundResource(R.drawable.bg_size_selector);
-            sizeView.setTextColor(Color.parseColor("#888888"));
-            layoutDetailSizes.addView(sizeView);
             return;
         }
-        // Only show colors that have at least one size with stock > 0
-        List<String> filteredColors = new ArrayList<>();
-        for (String color : colors) {
-            boolean hasStock = false;
-            for (StockEntry entry : stockEntries) {
-                if (entry.color.equals(color) && entry.stock > 0) {
-                    hasStock = true;
-                    break;
-                }
-            }
-            if (hasStock) filteredColors.add(color);
-        }
-        if (filteredColors.isEmpty()) {
-            // Show disabled color UI or message
-            txtSelectedColor.setText("Color: -");
+
+        if (availableColors.isEmpty()) {
+            txtSelectedColor.setText("Color: Out of Stock");
             View dot = new View(this);
             int size = (int) (28 * getResources().getDisplayMetrics().density);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
@@ -301,48 +341,50 @@ public class ProductDetailsActivity extends AppCompatActivity {
             bg.setColor(Color.LTGRAY);
             bg.setStroke(1, Color.parseColor("#888888"));
             layoutDetailColors.addView(dot);
-            // Show size label and disabled size UI
-            txtSelectedSize.setVisibility(View.VISIBLE);
-            txtSelectedSize.setText("Size: -");
-            layoutDetailSizes.removeAllViews();
-            TextView sizeView = new TextView(this);
-            sizeView.setText("-");
-            sizeView.setTextSize(15);
-            sizeView.setPadding(32, 8, 32, 8);
-            sizeView.setBackgroundResource(R.drawable.bg_size_selector);
-            sizeView.setTextColor(Color.parseColor("#888888"));
-            layoutDetailSizes.addView(sizeView);
             return;
         }
-        if (selectedColorIndex == -1 || selectedColorIndex >= filteredColors.size()) selectedColorIndex = 0;
-        updateSelectedColorLabel(filteredColors.get(selectedColorIndex));
-        for (int i = 0; i < filteredColors.size(); i++) {
-            String colorName = filteredColors.get(i);
+
+        // Set initial selected color if none selected
+        if (selectedColorIndex == -1 || selectedColorIndex >= availableColors.size()) {
+            selectedColorIndex = 0;
+        }
+        updateSelectedColorLabel(availableColors.get(selectedColorIndex));
+
+        // Create color dots
+        for (int i = 0; i < availableColors.size(); i++) {
+            String colorName = availableColors.get(i);
             View dot = new View(this);
-            int size = (int) (28 * getResources().getDisplayMetrics().density); // 28dp for detail page
+            int size = (int) (28 * getResources().getDisplayMetrics().density);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
             params.setMargins(16, 0, 16, 0);
             dot.setLayoutParams(params);
             dot.setBackgroundResource(R.drawable.bg_color_dot);
             GradientDrawable bg = (GradientDrawable) dot.getBackground();
             bg.setColor(getColorFromName(colorName));
+            
+            // Set selection state
             if (i == selectedColorIndex) {
-                bg.setStroke(4, Color.parseColor("#8B2CF5")); // Highlight selected
+                bg.setStroke(4, Color.parseColor("#8B2CF5")); // Selected state
             } else {
-                bg.setStroke(1, Color.parseColor("#888888"));
+                bg.setStroke(1, Color.parseColor("#888888")); // Unselected state
             }
+
             final int index = i;
             dot.setOnClickListener(v -> {
                 selectedColorIndex = index;
-                updateSelectedColorLabel(filteredColors.get(index));
-                updateAvailableSizesForColor(filteredColors.get(index));
-                showProductColors(filteredColors); // Refresh to update selection
+                String selectedColor = colors.get(selectedColorIndex);
+                Log.d("ColorSelectionDebug", "Color dot clicked. Selected color: " + selectedColor);
+                updateSelectedColorLabel(selectedColor);
+                updateAvailableSizesForColor(selectedColor);
+                showProductColors(colors); // Refresh to update selection with the same list
             });
+
             layoutDetailColors.addView(dot);
         }
-        // Show sizes for selected color
-        if (product != null && product.sizes != null) {
-            updateAvailableSizesForColor(filteredColors.get(selectedColorIndex));
+
+        // Update sizes for selected color
+        if (product != null && product.sizes != null && !colors.isEmpty()) {
+            updateAvailableSizesForColor(colors.get(selectedColorIndex));
         }
     }
 
@@ -422,34 +464,221 @@ public class ProductDetailsActivity extends AppCompatActivity {
     }
 
     private int getColorFromName(String colorName) {
-        if (colorName == null) return Color.LTGRAY;
-        colorName = colorName.trim();
-        if (colorName.isEmpty()) return Color.LTGRAY;
-        // Try to parse as hex code
-        if (colorName.startsWith("#") && (colorName.length() == 7 || colorName.length() == 9)) {
-            try {
-                // Only allow valid hex codes
-                if (colorName.matches("#[A-Fa-f0-9]{6}") || colorName.matches("#[A-Fa-f0-9]{8}")) {
-                    return Color.parseColor(colorName);
+        Log.d("ColorSelectionDebug", "getColorFromName called for color: " + colorName);
+        switch (colorName.toLowerCase()) {
+            case "red": return ContextCompat.getColor(this, R.color.product_red);
+            case "blue": return ContextCompat.getColor(this, R.color.product_blue);
+            case "green": return ContextCompat.getColor(this, R.color.product_green);
+            case "black": return ContextCompat.getColor(this, R.color.product_black);
+            case "white": return ContextCompat.getColor(this, R.color.product_white);
+            case "yellow": return ContextCompat.getColor(this, R.color.product_yellow);
+            case "purple": return ContextCompat.getColor(this, R.color.product_purple);
+            case "pink": return ContextCompat.getColor(this, R.color.product_pink);
+            case "orange": return ContextCompat.getColor(this, R.color.product_orange);
+            case "gray": return ContextCompat.getColor(this, R.color.product_gray);
+            default: return ContextCompat.getColor(this, R.color.default_color);
+        }
+    }
+
+    private void setupColorSelection() {
+        layoutDetailColors = findViewById(R.id.layoutDetailColors);
+        txtSelectedColor = findViewById(R.id.txtSelectedColor);
+        
+        // Get unique colors from stock entries
+        Set<String> uniqueColors = new HashSet<>();
+        for (StockEntry entry : stockEntries) {
+            uniqueColors.add(entry.color);
+        }
+        
+        // Create color chips
+        for (String color : uniqueColors) {
+            Chip colorChip = new Chip(this);
+            colorChip.setText(color);
+            colorChip.setCheckable(true);
+            colorChip.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (isChecked) {
+                    // Uncheck other chips
+                    for (int i = 0; i < layoutDetailColors.getChildCount(); i++) {
+                        View child = layoutDetailColors.getChildAt(i);
+                        if (child instanceof Chip && child != buttonView) {
+                            ((Chip) child).setChecked(false);
+                        }
+                    }
+                    txtSelectedColor.setText("Selected Color: " + color);
+                    selectedColorIndex = layoutDetailColors.indexOfChild(buttonView);
+                    updateAvailableSizes(color);
+                } else {
+                    txtSelectedColor.setText("Select a color");
+                    selectedColorIndex = -1;
+                    layoutDetailSizes.removeAllViews();
                 }
-            } catch (Exception e) {
-                return Color.LTGRAY;
+            });
+            layoutDetailColors.addView(colorChip);
+        }
+    }
+
+    private void setupSizeSelection() {
+        layoutDetailSizes = findViewById(R.id.layoutDetailSizes);
+        txtSelectedSize = findViewById(R.id.txtSelectedSize);
+    }
+
+    private void updateAvailableSizes(String selectedColor) {
+        layoutDetailSizes.removeAllViews();
+        Set<String> availableSizes = new HashSet<>();
+        
+        // Get available sizes for selected color
+        for (StockEntry entry : stockEntries) {
+            if (entry.color.equals(selectedColor) && entry.stock > 0) {
+                availableSizes.add(entry.size);
             }
         }
-        // Fallback to name mapping
-        switch (colorName.toLowerCase()) {
-            case "red": return Color.RED;
-            case "blue": return Color.BLUE;
-            case "green": return Color.GREEN;
-            case "black": return Color.BLACK;
-            case "white": return Color.WHITE;
-            case "yellow": return Color.YELLOW;
-            case "orange": return 0xFFFFA500;
-            case "purple": return 0xFF800080;
-            case "pink": return 0xFFFFC0CB;
-            case "brown": return 0xFFA52A2A;
-            case "gray": return Color.GRAY;
-            default: return Color.LTGRAY;
+        
+        // Create size chips
+        for (String size : availableSizes) {
+            Chip sizeChip = new Chip(this);
+            sizeChip.setText(size);
+            sizeChip.setCheckable(true);
+            sizeChip.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (isChecked) {
+                    // Uncheck other chips
+                    for (int i = 0; i < layoutDetailSizes.getChildCount(); i++) {
+                        View child = layoutDetailSizes.getChildAt(i);
+                        if (child instanceof Chip && child != buttonView) {
+                            ((Chip) child).setChecked(false);
+                        }
+                    }
+                    txtSelectedSize.setText("Selected Size: " + size);
+                    selectedSizeIndex = layoutDetailSizes.indexOfChild(buttonView);
+                    updateBuyButtonState();
+                } else {
+                    txtSelectedSize.setText("Select a size");
+                    selectedSizeIndex = -1;
+                    updateBuyButtonState();
+                }
+            });
+            layoutDetailSizes.addView(sizeChip);
         }
+    }
+
+    private void updateBuyButtonState() {
+        boolean canBuy = selectedColorIndex != -1 && selectedSizeIndex != -1;
+        btnBuyNow.setEnabled(canBuy);
+        btnAddToCart.setEnabled(canBuy);
+    }
+
+    private void setupBuyButtons() {
+        btnBuyNow = findViewById(R.id.btnBuyNow);
+        btnAddToCart = findViewById(R.id.btnAddToCart);
+        
+        btnBuyNow.setOnClickListener(v -> {
+            if (selectedColorIndex == -1 || selectedSizeIndex == -1) {
+                Toast.makeText(this, "Please select both color and size", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            // Get selected color and size
+            String selectedColor = null;
+            String selectedSize = null;
+
+            if (selectedColorIndex >= 0 && selectedColorIndex < availableColors.size()) {
+                selectedColor = availableColors.get(selectedColorIndex);
+            } else {
+                Toast.makeText(this, "Error getting selected color. Please re-select.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (selectedSizeIndex >= 0 && selectedSizeIndex < availableSizes.size()) {
+                selectedSize = availableSizes.get(selectedSizeIndex);
+            } else {
+                Toast.makeText(this, "Error getting selected size. Please re-select.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            // Find matching stock entry
+            StockEntry selectedEntry = null;
+            for (StockEntry entry : stockEntries) {
+                if (entry.color.equals(selectedColor) && entry.size.equals(selectedSize)) {
+                    selectedEntry = entry;
+                    break;
+                }
+            }
+            
+            if (selectedEntry != null && selectedEntry.stock > 0) {
+                // Start BuyNowActivity with selected options
+                Intent intent = new Intent(this, BuyNowActivity.class);
+                intent.putExtra("productId", product.id);
+                intent.putExtra("sellerId", product.sellerId);
+                intent.putExtra("productName", product.name);
+                intent.putExtra("productPrice", product.price);
+                intent.putExtra("selectedColor", selectedColor);
+                intent.putExtra("selectedSize", selectedSize);
+                intent.putExtra("availableStock", selectedEntry.stock);
+                startActivity(intent);
+            } else {
+                Toast.makeText(this, "Selected combination is out of stock", Toast.LENGTH_SHORT).show();
+            }
+        });
+        
+        btnAddToCart.setOnClickListener(v -> {
+            if (selectedColorIndex == -1 || selectedSizeIndex == -1) {
+                Toast.makeText(this, "Please select both color and size", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            // Get selected color and size
+            String selectedColor = null;
+            String selectedSize = null;
+
+            if (selectedColorIndex >= 0 && selectedColorIndex < availableColors.size()) {
+                selectedColor = availableColors.get(selectedColorIndex);
+            } else {
+                Toast.makeText(this, "Error getting selected color. Please re-select.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (selectedSizeIndex >= 0 && selectedSizeIndex < availableSizes.size()) {
+                selectedSize = availableSizes.get(selectedSizeIndex);
+            } else {
+                Toast.makeText(this, "Error getting selected size. Please re-select.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            
+            // Find matching stock entry
+            StockEntry selectedEntry = null;
+            for (StockEntry entry : stockEntries) {
+                if (entry.color.equals(selectedColor) && entry.size.equals(selectedSize)) {
+                    selectedEntry = entry;
+                    break;
+                }
+            }
+            
+            if (selectedEntry != null && selectedEntry.stock > 0) {
+                // Add to cart logic here
+                addToCart(product.id, selectedColor, selectedSize);
+            } else {
+                Toast.makeText(this, "Selected combination is out of stock", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void addToCart(String productId, String color, String size) {
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        Map<String, Object> cartItem = new HashMap<>();
+        cartItem.put("productId", productId);
+        cartItem.put("color", color);
+        cartItem.put("size", size);
+        cartItem.put("quantity", 1);
+        cartItem.put("timestamp", System.currentTimeMillis());
+        
+        db.collection("users").document(userId)
+            .collection("cart")
+            .add(cartItem)
+            .addOnSuccessListener(documentReference -> {
+                Toast.makeText(this, "Added to cart", Toast.LENGTH_SHORT).show();
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(this, "Failed to add to cart: " + e.getMessage(), 
+                    Toast.LENGTH_SHORT).show();
+            });
     }
 }
