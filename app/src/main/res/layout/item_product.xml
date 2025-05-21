@@ -52,6 +52,14 @@
             android:textColor="#888888"
             android:textSize="13sp" />
 
+        <LinearLayout
+            android:id="@+id/layoutProductColors"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"/>
+
         <ImageButton
             android:id="@+id/btnEditProduct"
             android:layout_width="32dp"

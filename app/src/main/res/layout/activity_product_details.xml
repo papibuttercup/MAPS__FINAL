@@ -93,6 +93,8 @@
                             android:textColor="#888"
                             android:textSize="14sp"
                             android:layout_marginBottom="4dp" />
+
+                        <!-- Color selection moved below price -->
                     </LinearLayout>
 
                     <!-- Price Row -->
@@ -107,15 +109,39 @@
                         android:layout_marginTop="8dp"
                         android:layout_marginBottom="8dp"/>
 
-                    <!-- Stock Only -->
-                    <TextView
-                        android:id="@+id/txtStock"
+                    <LinearLayout
+                        android:id="@+id/layoutDetailColors"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Stock: 0"
-                        android:textColor="#888"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="0dp"
+                        android:layout_marginBottom="4dp"/>
+
+                    <TextView
+                        android:id="@+id/txtSelectedColor"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Color: "
                         android:textSize="15sp"
-                        android:layout_marginBottom="8dp"/>
+                        android:textColor="#444444"
+                        android:layout_marginBottom="12dp"/>
+
+                    <LinearLayout
+                        android:id="@+id/layoutDetailSizes"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="0dp"
+                        android:layout_marginBottom="4dp"/>
+
+                    <TextView
+                        android:id="@+id/txtSelectedSize"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Size: "
+                        android:textSize="15sp"
+                        android:textColor="#444444"
+                        android:layout_marginBottom="12dp"/>
 
                     <!-- Guarantee/Info Section -->
                     <LinearLayout

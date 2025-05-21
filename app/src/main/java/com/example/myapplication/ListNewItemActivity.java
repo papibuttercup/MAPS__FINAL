@@ -20,6 +20,8 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
@@ -30,13 +32,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import android.view.ViewGroup;
+import android.widget.TextView;
 
 public class ListNewItemActivity extends AppCompatActivity {
     private static final int PICK_COVER_PHOTO_REQUEST = 1;
     private static final int PICK_IMAGES_REQUEST = 2;
-    private EditText etName, etDescription, etPrice, etStock, etWeight, etParcelSize;
-    private Spinner spinnerMainCategory, spinnerCategory;
-    private Button btnAddCoverPhoto, btnAddImages, btnAddProduct;
+    private EditText etName, etDescription, etPrice, etWeight, etParcelSize, etCustomColor, etCustomSize;
+    private Spinner spinnerMainCategory, spinnerCategory, spinnerStockColor, spinnerStockSize;
+    private Button btnAddCoverPhoto, btnAddImages, btnAddProduct, btnAddColor, btnAddSize, buttonAddStockEntry;
     private ImageView imgCoverPreview;
     private LinearLayout layoutImagePreviews;
     private ArrayList<Uri> productImageUris = new ArrayList<>();
@@ -48,9 +52,20 @@ public class ListNewItemActivity extends AppCompatActivity {
     private String editingProductId = null;
     private String editingCoverPhotoUri = null;
     private ArrayList<String> editingProductImageUris = new ArrayList<>();
+    private EditText editTextStockValue;
+    private RecyclerView recyclerViewStockEntries;
+    private ArrayList<StockEntry> stockEntries = new ArrayList<>();
+    private StockEntryAdapter stockEntryAdapter;
 
     private ActivityResultLauncher<Intent> coverPhotoLauncher;
     private ActivityResultLauncher<Intent> productImagesLauncher;
+
+    private Spinner spinnerAvailableColors, spinnerAvailableSizes;
+    private Button btnRemoveColor, btnRemoveSize;
+    private ArrayList<String> colorList = new ArrayList<>();
+    private ArrayAdapter<String> colorAdapter;
+    private ArrayList<String> sizeList = new ArrayList<>();
+    private ArrayAdapter<String> sizeAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,7 +75,6 @@ public class ListNewItemActivity extends AppCompatActivity {
         etName = findViewById(R.id.etName);
         etDescription = findViewById(R.id.etDescription);
         etPrice = findViewById(R.id.etPrice);
-        etStock = findViewById(R.id.etStock);
         etWeight = findViewById(R.id.etWeight);
         etParcelSize = findViewById(R.id.etParcelSize);
         spinnerMainCategory = findViewById(R.id.spinnerCategory);
@@ -68,11 +82,24 @@ public class ListNewItemActivity extends AppCompatActivity {
         btnAddCoverPhoto = findViewById(R.id.btnAddCoverPhoto);
         btnAddImages = findViewById(R.id.btnAddImages);
         btnAddProduct = findViewById(R.id.btnAddProduct);
+        btnAddColor = findViewById(R.id.btnAddColor);
+        btnAddSize = findViewById(R.id.btnAddSize);
         imgCoverPreview = findViewById(R.id.imgCoverPreview);
         layoutImagePreviews = findViewById(R.id.layoutImagePreviews);
         progressDialog = new AlertDialog.Builder(this).setView(R.layout.progress_dialog).setCancelable(false).create();
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
+        editTextStockValue = findViewById(R.id.editTextStockValue);
+        buttonAddStockEntry = findViewById(R.id.buttonAddStockEntry);
+        recyclerViewStockEntries = findViewById(R.id.recyclerViewStockEntries);
+        spinnerAvailableColors = findViewById(R.id.spinnerAvailableColors);
+        spinnerAvailableSizes = findViewById(R.id.spinnerAvailableSizes);
+        btnRemoveColor = findViewById(R.id.btnRemoveColor);
+        btnRemoveSize = findViewById(R.id.btnRemoveSize);
+        spinnerStockColor = findViewById(R.id.spinnerStockColor);
+        spinnerStockSize = findViewById(R.id.spinnerStockSize);
+        etCustomColor = findViewById(R.id.etCustomColor);
+        etCustomSize = findViewById(R.id.etCustomSize);
 
         setupCategorySpinners();
 
@@ -81,8 +108,6 @@ public class ListNewItemActivity extends AppCompatActivity {
             editingProductId = intent.getStringExtra("productId");
             etName.setText(intent.getStringExtra("name"));
             etPrice.setText(String.valueOf(intent.getDoubleExtra("price", 0)));
-            etStock.setText(String.valueOf(intent.getIntExtra("stock", 0)));
-            etDescription.setText(intent.getStringExtra("description"));
             etWeight.setText(String.valueOf(intent.getDoubleExtra("weight", 0)));
             etParcelSize.setText(intent.getStringExtra("parcelSize"));
             editingCoverPhotoUri = intent.getStringExtra("coverPhotoUri");
@@ -135,7 +160,123 @@ public class ListNewItemActivity extends AppCompatActivity {
             });
         }
 
+        // Default colors and sizes
+        colorList.add("Red");
+        colorList.add("Blue");
+        colorList.add("Green");
+        colorList.add("Black");
+        colorList.add("White");
+        colorAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, colorList);
+        colorAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerAvailableColors.setAdapter(colorAdapter);
+
+        sizeList.add("S");
+        sizeList.add("M");
+        sizeList.add("L");
+        sizeList.add("XL");
+        sizeList.add("XXL");
+        sizeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, sizeList);
+        sizeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerAvailableSizes.setAdapter(sizeAdapter);
+
+        spinnerStockColor.setAdapter(colorAdapter);
+        spinnerStockSize.setAdapter(sizeAdapter);
+
+        btnRemoveColor.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int pos = spinnerAvailableColors.getSelectedItemPosition();
+                if (pos >= 0 && colorList.size() > 1) {
+                    colorList.remove(pos);
+                    colorAdapter.notifyDataSetChanged();
+                    spinnerStockColor.setAdapter(colorAdapter);
+                }
+            }
+        });
+        btnRemoveSize.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int pos = spinnerAvailableSizes.getSelectedItemPosition();
+                if (pos >= 0 && sizeList.size() > 1) {
+                    sizeList.remove(pos);
+                    sizeAdapter.notifyDataSetChanged();
+                    spinnerStockSize.setAdapter(sizeAdapter);
+                }
+            }
+        });
+        btnAddColor.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String color = etCustomColor.getText().toString().trim();
+                // List of common color names (add more as needed)
+                String[] allowedColors = {"Red", "Blue", "Green", "Black", "White", "Yellow", "Pink", "Purple", "Orange", "Brown", "Gray", "Grey", "Beige", "Violet", "Indigo", "Gold", "Silver", "Maroon", "Navy", "Teal", "Olive", "Cyan", "Magenta", "Turquoise", "Peach", "Mint", "Coral", "Lavender", "Burgundy", "Cream", "Khaki", "Tan", "Charcoal", "Aqua", "Lime", "Mustard", "Salmon", "Ivory", "Bronze", "Copper", "Rose", "Plum", "Azure", "Amber", "Emerald", "Sapphire", "Ruby", "Chocolate", "Sand", "Lilac", "Mauve", "Pearl", "Slate", "Denim", "Fuchsia", "Wine", "Cherry", "Sky", "Forest", "Sea", "Stone", "Blush", "Eggplant", "Mocha", "Onyx", "Jade", "Mint", "Rust", "Snow", "Sunflower", "Berry", "Graphite", "Pine", "Clay", "Dusty Rose", "Powder Blue", "Light Blue", "Light Green", "Light Pink", "Light Gray", "Dark Blue", "Dark Green", "Dark Red", "Dark Gray", "Dark Brown", "Off White"};
+                boolean isAllowedColor = false;
+                // Check if it's a valid hex code
+                if (color.matches("#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})")) {
+                    isAllowedColor = true;
+                } else {
+                    for (String allowed : allowedColors) {
+                        if (allowed.equalsIgnoreCase(color)) {
+                            isAllowedColor = true;
+                            break;
+                        }
+                    }
+                }
+                if (!isAllowedColor) {
+                    Toast.makeText(ListNewItemActivity.this, "Enter a valid color name (e.g., Red, Blue, Black, etc.) or hex code (e.g., #FF5733)", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                if (!color.isEmpty() && !colorList.contains(color)) {
+                    colorList.add(color);
+                    colorAdapter.notifyDataSetChanged();
+                    spinnerStockColor.setAdapter(colorAdapter);
+                    etCustomColor.setText("");
+                }
+            }
+        });
+        btnAddSize.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String size = etCustomSize.getText().toString().trim();
+                if (!size.isEmpty() && !sizeList.contains(size)) {
+                    sizeList.add(size);
+                    sizeAdapter.notifyDataSetChanged();
+                    spinnerStockSize.setAdapter(sizeAdapter);
+                    etCustomSize.setText("");
+                }
+            }
+        });
+
         setupActivityResultLaunchers();
+
+        stockEntryAdapter = new StockEntryAdapter(stockEntries);
+        recyclerViewStockEntries.setLayoutManager(new LinearLayoutManager(this));
+        recyclerViewStockEntries.setAdapter(stockEntryAdapter);
+
+        buttonAddStockEntry.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String color = spinnerStockColor.getSelectedItem().toString();
+                String size = spinnerStockSize.getSelectedItem().toString();
+                int stock = 0;
+                try {
+                    stock = Integer.parseInt(editTextStockValue.getText().toString());
+                } catch (Exception ignored) {}
+                boolean updated = false;
+                for (StockEntry entry : stockEntries) {
+                    if (entry.color.equals(color) && entry.size.equals(size)) {
+                        entry.stock = stock;
+                        updated = true;
+                        break;
+                    }
+                }
+                if (!updated) {
+                    stockEntries.add(new StockEntry(color, size, stock));
+                }
+                stockEntryAdapter.notifyDataSetChanged();
+                editTextStockValue.setText("");
+            }
+        });
     }
 
     private void setupCategorySpinners() {
@@ -247,13 +388,12 @@ public class ListNewItemActivity extends AppCompatActivity {
         String name = etName.getText().toString().trim();
         String description = etDescription.getText().toString().trim();
         String priceStr = etPrice.getText().toString().trim();
-        String stockStr = etStock.getText().toString().trim();
         String weightStr = etWeight.getText().toString().trim();
         String parcelSize = etParcelSize.getText().toString().trim();
 
         if (TextUtils.isEmpty(selectedMainCategory) || TextUtils.isEmpty(selectedCategory) ||
                 TextUtils.isEmpty(name) || TextUtils.isEmpty(description) || TextUtils.isEmpty(priceStr) ||
-                TextUtils.isEmpty(stockStr) || TextUtils.isEmpty(weightStr) || TextUtils.isEmpty(parcelSize) || coverPhotoUri == null) {
+                TextUtils.isEmpty(weightStr) || TextUtils.isEmpty(parcelSize) || coverPhotoUri == null) {
             Toast.makeText(this, "Please fill all fields and add a cover photo", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -263,14 +403,12 @@ public class ListNewItemActivity extends AppCompatActivity {
         }
 
         double price;
-        int stock;
         double weight;
         try {
             price = Double.parseDouble(priceStr);
-            stock = Integer.parseInt(stockStr);
             weight = Double.parseDouble(weightStr);
         } catch (NumberFormatException e) {
-            Toast.makeText(this, "Invalid price, stock, or weight", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Invalid price or weight", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -289,7 +427,7 @@ public class ListNewItemActivity extends AppCompatActivity {
                 return coverRef.getDownloadUrl();
             })
             .addOnSuccessListener(coverUri -> {
-                uploadProductImages(storageRef, sellerId, timestamp, coverUri.toString(), name, description, price, stock, weight, parcelSize);
+                uploadProductImages(storageRef, sellerId, timestamp, coverUri.toString(), name, description, price, weight, parcelSize);
             })
             .addOnFailureListener(e -> {
                 progressDialog.dismiss();
@@ -297,19 +435,19 @@ public class ListNewItemActivity extends AppCompatActivity {
             });
     }
 
-    private void uploadProductImages(StorageReference storageRef, String sellerId, long timestamp, String coverUrl, String name, String description, double price, int stock, double weight, String parcelSize) {
+    private void uploadProductImages(StorageReference storageRef, String sellerId, long timestamp, String coverUrl, String name, String description, double price, double weight, String parcelSize) {
         ArrayList<String> imageUrls = new ArrayList<>();
         ArrayList<Uri> uris = new ArrayList<>(productImageUris);
         if (uris.isEmpty()) {
-            saveProductToFirestore(coverUrl, imageUrls, name, description, price, stock, weight, parcelSize);
+            saveProductToFirestore(coverUrl, imageUrls, name, description, price, weight, parcelSize);
             return;
         }
-        uploadNextImage(storageRef, sellerId, timestamp, uris, imageUrls, 0, coverUrl, name, description, price, stock, weight, parcelSize);
+        uploadNextImage(storageRef, sellerId, timestamp, uris, imageUrls, 0, coverUrl, name, description, price, weight, parcelSize);
     }
 
-    private void uploadNextImage(StorageReference storageRef, String sellerId, long timestamp, ArrayList<Uri> uris, ArrayList<String> imageUrls, int index, String coverUrl, String name, String description, double price, int stock, double weight, String parcelSize) {
+    private void uploadNextImage(StorageReference storageRef, String sellerId, long timestamp, ArrayList<Uri> uris, ArrayList<String> imageUrls, int index, String coverUrl, String name, String description, double price, double weight, String parcelSize) {
         if (index >= uris.size()) {
-            saveProductToFirestore(coverUrl, imageUrls, name, description, price, stock, weight, parcelSize);
+            saveProductToFirestore(coverUrl, imageUrls, name, description, price, weight, parcelSize);
             return;
         }
         Uri uri = uris.get(index);
@@ -321,7 +459,7 @@ public class ListNewItemActivity extends AppCompatActivity {
             })
             .addOnSuccessListener(imgUri -> {
                 imageUrls.add(imgUri.toString());
-                uploadNextImage(storageRef, sellerId, timestamp, uris, imageUrls, index + 1, coverUrl, name, description, price, stock, weight, parcelSize);
+                uploadNextImage(storageRef, sellerId, timestamp, uris, imageUrls, index + 1, coverUrl, name, description, price, weight, parcelSize);
             })
             .addOnFailureListener(e -> {
                 progressDialog.dismiss();
@@ -329,7 +467,7 @@ public class ListNewItemActivity extends AppCompatActivity {
             });
     }
 
-    private void saveProductToFirestore(String coverUrl, ArrayList<String> imageUrls, String name, String description, double price, int stock, double weight, String parcelSize) {
+    private void saveProductToFirestore(String coverUrl, ArrayList<String> imageUrls, String name, String description, double price, double weight, String parcelSize) {
         String sellerId = mAuth.getCurrentUser() != null ? mAuth.getCurrentUser().getUid() : "";
         String sellerName = ""; // Optionally fetch seller name from Firestore if needed
         Map<String, Object> product = new HashMap<>();
@@ -338,7 +476,6 @@ public class ListNewItemActivity extends AppCompatActivity {
         product.put("name", name);
         product.put("description", description);
         product.put("price", price);
-        product.put("stock", stock);
         product.put("weight", weight);
         product.put("parcelSize", parcelSize);
         product.put("coverPhotoUri", coverUrl);
@@ -347,6 +484,22 @@ public class ListNewItemActivity extends AppCompatActivity {
         product.put("sellerId", sellerId);
         product.put("sellerName", sellerName);
         product.put("createdAt", System.currentTimeMillis());
+
+        List<Map<String, Object>> stockEntryList = new ArrayList<>();
+        java.util.Set<String> colorSet = new java.util.HashSet<>();
+        java.util.Set<String> sizeSet = new java.util.HashSet<>();
+        for (StockEntry entry : stockEntries) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("color", entry.color);
+            map.put("size", entry.size);
+            map.put("stock", entry.stock);
+            stockEntryList.add(map);
+            if (entry.color != null && !entry.color.trim().isEmpty()) colorSet.add(entry.color.trim());
+            if (entry.size != null && !entry.size.trim().isEmpty()) sizeSet.add(entry.size.trim());
+        }
+        product.put("stockEntries", stockEntryList);
+        product.put("colors", new ArrayList<>(colorSet));
+        product.put("sizes", new ArrayList<>(sizeSet));
 
         db.collection("products")
             .add(product)
@@ -365,28 +518,39 @@ public class ListNewItemActivity extends AppCompatActivity {
         String name = etName.getText().toString().trim();
         String description = etDescription.getText().toString().trim();
         String priceStr = etPrice.getText().toString().trim();
-        String stockStr = etStock.getText().toString().trim();
         String weightStr = etWeight.getText().toString().trim();
         String parcelSize = etParcelSize.getText().toString().trim();
         double price;
-        int stock;
         double weight;
         try {
             price = Double.parseDouble(priceStr);
-            stock = Integer.parseInt(stockStr);
             weight = Double.parseDouble(weightStr);
         } catch (NumberFormatException e) {
-            Toast.makeText(this, "Invalid price, stock, or weight", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Invalid price or weight", Toast.LENGTH_SHORT).show();
             return;
         }
         Map<String, Object> updates = new HashMap<>();
         updates.put("name", name);
         updates.put("description", description);
         updates.put("price", price);
-        updates.put("stock", stock);
         updates.put("weight", weight);
         updates.put("parcelSize", parcelSize);
-        // Optionally update images and categories if you want
+        // Add stockEntries update
+        List<Map<String, Object>> stockEntryList = new ArrayList<>();
+        java.util.Set<String> colorSet = new java.util.HashSet<>();
+        java.util.Set<String> sizeSet = new java.util.HashSet<>();
+        for (StockEntry entry : stockEntries) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("color", entry.color);
+            map.put("size", entry.size);
+            map.put("stock", entry.stock);
+            stockEntryList.add(map);
+            if (entry.color != null && !entry.color.trim().isEmpty()) colorSet.add(entry.color.trim());
+            if (entry.size != null && !entry.size.trim().isEmpty()) sizeSet.add(entry.size.trim());
+        }
+        updates.put("stockEntries", stockEntryList);
+        updates.put("colors", new ArrayList<>(colorSet));
+        updates.put("sizes", new ArrayList<>(sizeSet));
         db.collection("products").document(productId)
             .update(updates)
             .addOnSuccessListener(aVoid -> {
@@ -396,5 +560,37 @@ public class ListNewItemActivity extends AppCompatActivity {
             .addOnFailureListener(e -> {
                 Toast.makeText(this, "Failed to update product: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             });
+    }
+
+    public static class StockEntry {
+        public String color;
+        public String size;
+        public int stock;
+        public StockEntry(String color, String size, int stock) {
+            this.color = color;
+            this.size = size;
+            this.stock = stock;
+        }
+    }
+
+    public class StockEntryAdapter extends RecyclerView.Adapter<StockEntryAdapter.ViewHolder> {
+        private ArrayList<StockEntry> entries;
+        public StockEntryAdapter(ArrayList<StockEntry> entries) { this.entries = entries; }
+        @Override
+        public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            TextView tv = new TextView(parent.getContext());
+            tv.setPadding(16, 16, 16, 16);
+            return new ViewHolder(tv);
+        }
+        @Override
+        public void onBindViewHolder(ViewHolder holder, int position) {
+            StockEntry entry = entries.get(position);
+            ((TextView) holder.itemView).setText(entry.color + " - " + entry.size + ": " + entry.stock);
+        }
+        @Override
+        public int getItemCount() { return entries.size(); }
+        public class ViewHolder extends RecyclerView.ViewHolder {
+            public ViewHolder(View itemView) { super(itemView); }
+        }
     }
 } 

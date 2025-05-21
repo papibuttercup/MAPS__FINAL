@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:padding="12dp">
 
         <TextView
             android:layout_width="wrap_content"
@@ -18,7 +18,7 @@
             android:textSize="24sp"
             android:textStyle="bold"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="12dp" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -33,19 +33,142 @@
             android:hint="Enter product name"
             android:layout_marginBottom="16dp" />
 
+        <!-- Available Colors -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Stock"
+            android:text="Available Colors"
             android:textStyle="bold"
-            android:textSize="16sp" />
-        <EditText
-            android:id="@+id/etProductStock"
+            android:layout_marginTop="8dp" />
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Enter stock"
-            android:inputType="number"
-            android:layout_marginBottom="16dp" />
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+            <Spinner
+                android:id="@+id/spinnerAvailableColorsEdit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:prompt="@string/select_color" />
+            <Button
+                android:id="@+id/btnRemoveColorEdit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Remove"
+                android:backgroundTint="@color/colorPrimary"
+                android:textColor="@android:color/white" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+            <EditText
+                android:id="@+id/etCustomColorEdit"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Add custom color"
+                android:inputType="textCapWords" />
+            <Button
+                android:id="@+id/btnAddColorEdit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Add"
+                android:backgroundTint="@color/colorPrimary"
+                android:textColor="@android:color/white" />
+        </LinearLayout>
+        <!-- Available Sizes -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Available Sizes"
+            android:textStyle="bold"
+            android:layout_marginTop="8dp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+            <Spinner
+                android:id="@+id/spinnerAvailableSizesEdit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:prompt="@string/select_size" />
+            <Button
+                android:id="@+id/btnRemoveSizeEdit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Remove"
+                android:backgroundTint="@color/colorPrimary"
+                android:textColor="@android:color/white" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+            <EditText
+                android:id="@+id/etCustomSizeEdit"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Add custom size"
+                android:inputType="textCapCharacters" />
+            <Button
+                android:id="@+id/btnAddSizeEdit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Add"
+                android:backgroundTint="@color/colorPrimary"
+                android:textColor="@android:color/white" />
+        </LinearLayout>
+        <!-- After the custom color and custom size input sections, before Cover Photo -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Stock for Color &amp; Size"
+            android:textStyle="bold"
+            android:layout_marginTop="8dp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+            <Spinner
+                android:id="@+id/spinnerStockColorEdit"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:prompt="@string/select_color" />
+            <Spinner
+                android:id="@+id/spinnerStockSizeEdit"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:prompt="@string/select_size" />
+            <EditText
+                android:id="@+id/editTextStockValueEdit"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Stock"
+                android:inputType="number"
+                android:textColor="#000000"
+                android:background="@android:drawable/edit_text" />
+            <Button
+                android:id="@+id/buttonAddStockEntryEdit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Add/Update"
+                android:backgroundTint="@color/colorPrimary"
+                android:textColor="@android:color/white" />
+        </LinearLayout>
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerViewStockEntriesEdit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -53,20 +176,20 @@
             android:text="Cover Photo"
             android:textStyle="bold"
             android:textSize="16sp"
-            android:layout_marginTop="8dp" />
+            android:layout_marginTop="4dp" />
         <ImageView
             android:id="@+id/coverPhotoImageView"
             android:layout_width="match_parent"
             android:layout_height="180dp"
             android:scaleType="centerCrop"
             android:background="#EEE"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="4dp" />
         <Button
             android:id="@+id/changeCoverPhotoButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Edit Cover Photo"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="8dp" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -74,13 +197,13 @@
             android:text="Product Images"
             android:textStyle="bold"
             android:textSize="16sp"
-            android:layout_marginTop="8dp" />
+            android:layout_marginTop="4dp" />
         <!-- Carousel for product images -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvProductImages"
             android:layout_width="match_parent"
             android:layout_height="100dp"
-            android:layout_marginBottom="8dp"
+            android:layout_marginBottom="4dp"
             android:orientation="horizontal"
             android:overScrollMode="never"
             android:scrollbars="horizontal" />
@@ -89,7 +212,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Edit Images"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="12dp" />
 
         <Button
             android:id="@+id/btnSaveProduct"

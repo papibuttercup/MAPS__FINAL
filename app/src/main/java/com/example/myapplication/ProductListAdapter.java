@@ -15,6 +15,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
 import com.bumptech.glide.Glide;
 import android.content.Intent;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 
 public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.ViewHolder> {
     private List<Product> products;
@@ -119,11 +123,59 @@ public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.
                 productClickListener.onProductClick(product);
             }
         });
+        // Color dots logic
+        LinearLayout colorLayout = holder.itemView.findViewById(R.id.layoutProductColors);
+        colorLayout.removeAllViews();
+        if (product.colors != null) {
+            for (String colorName : product.colors) {
+                View dot = new View(context);
+                int size = (int) (18 * context.getResources().getDisplayMetrics().density); // 18dp to px
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
+                params.setMargins(6, 0, 6, 0);
+                dot.setLayoutParams(params);
+                dot.setBackgroundResource(R.drawable.bg_color_dot);
+                GradientDrawable bg = (GradientDrawable) dot.getBackground();
+                bg.setColor(getColorFromName(colorName));
+                colorLayout.addView(dot);
+            }
+        }
     }
 
     @Override
     public int getItemCount() {
         return products.size();
+    }
+
+    private int getColorFromName(String colorName) {
+        if (colorName == null) return Color.LTGRAY;
+        colorName = colorName.trim();
+        if (colorName.isEmpty()) return Color.LTGRAY;
+        // Try to parse as hex code
+        if (colorName.startsWith("#") && (colorName.length() == 7 || colorName.length() == 9)) {
+            try {
+                // Only allow valid hex codes
+                if (colorName.matches("#[A-Fa-f0-9]{6}") || colorName.matches("#[A-Fa-f0-9]{8}")) {
+                    return Color.parseColor(colorName);
+                }
+            } catch (Exception e) {
+                return Color.LTGRAY;
+            }
+        }
+        // Fallback to name mapping
+        switch (colorName.toLowerCase()) {
+            case "red": return Color.RED;
+            case "blue": return Color.BLUE;
+            case "green": return Color.GREEN;
+            case "black": return Color.BLACK;
+            case "white": return Color.WHITE;
+            case "yellow": return Color.YELLOW;
+            case "orange": return 0xFFFFA500;
+            case "purple": return 0xFF800080;
+            case "pink": return 0xFFFFC0CB;
+            case "brown": return 0xFFA52A2A;
+            case "gray": return Color.GRAY;
+            default: return Color.LTGRAY;
+        }
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {

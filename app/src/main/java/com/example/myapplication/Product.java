@@ -18,6 +18,8 @@ public class Product {
     public long createdAt;
     public String mainCategory;
     public String parcelSize;
+    public List<String> colors;
+    public List<String> sizes;
 
     public Product() {}
 } 

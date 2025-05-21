@@ -177,4 +177,6 @@
         <item>Victoria Village</item>
         <item>West Quirino Hill</item>
     </string-array>
+    <string name="select_color">Select Color</string>
+    <string name="select_size">Select Size</string>
 </resources>
