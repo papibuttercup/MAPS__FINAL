@@ -29,7 +29,7 @@ public class DeliveringOrdersFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_orders_list, container, false);
         recyclerView = view.findViewById(R.id.recyclerOrders);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        adapter = new OrdersAdapter(orders);
+        adapter = new OrdersAdapter(orders, false);
         recyclerView.setAdapter(adapter);
         db = FirebaseFirestore.getInstance();
         sellerId = FirebaseAuth.getInstance().getCurrentUser().getUid();

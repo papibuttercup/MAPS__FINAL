@@ -68,36 +68,44 @@
             android:layout_marginTop="16dp">
 
             <Button
-                android:id="@+id/btnAccept"
-                android:layout_width="0dp"
+                android:id="@+id/btnCancel"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="4dp"
+                android:text="Cancel Order"
+                android:visibility="gone"
+                android:layout_marginTop="8dp"
+                android:backgroundTint="#FF5252"
+                android:textColor="@android:color/white" />
+
+            <Button
+                android:id="@+id/btnAccept"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:text="Accept"
-                android:textColor="@android:color/white"
-                android:backgroundTint="@color/design_default_color_primary"
-                android:visibility="gone"/>
+                android:visibility="gone"
+                android:layout_marginTop="8dp"
+                android:backgroundTint="#4CAF50"
+                android:textColor="@android:color/white" />
 
             <Button
                 android:id="@+id/btnReject"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="4dp"
                 android:text="Reject"
-                android:textColor="@android:color/white"
-                android:backgroundTint="@android:color/holo_red_dark"
-                android:visibility="gone"/>
+                android:visibility="gone"
+                android:layout_marginTop="8dp"
+                android:backgroundTint="#FF5252"
+                android:textColor="@android:color/white" />
 
             <Button
                 android:id="@+id/btnComplete"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Complete"
-                android:textColor="@android:color/white"
-                android:backgroundTint="@android:color/holo_green_dark"
-                android:visibility="gone"/>
+                android:text="Mark as Delivered"
+                android:visibility="gone"
+                android:layout_marginTop="8dp"
+                android:backgroundTint="#2196F3"
+                android:textColor="@android:color/white" />
         </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView> 

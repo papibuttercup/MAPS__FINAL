@@ -22,7 +22,8 @@ public class SellerOrdersActivity extends AppCompatActivity {
         new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
             if (position == 0) tab.setText("Pending");
             else if (position == 1) tab.setText("Delivering");
-            else tab.setText("Finished");
+            else if (position == 2) tab.setText("Finished");
+            else tab.setText("Canceled");
         }).attach();
     }
 
@@ -35,9 +36,10 @@ public class SellerOrdersActivity extends AppCompatActivity {
         public Fragment createFragment(int position) {
             if (position == 0) return new PendingOrdersFragment();
             else if (position == 1) return new DeliveringOrdersFragment();
-            else return new FinishedOrdersFragment();
+            else if (position == 2) return new FinishedOrdersFragment();
+            else return new CanceledOrdersFragment();
         }
         @Override
-        public int getItemCount() { return 3; }
+        public int getItemCount() { return 4; }
     }
 } 

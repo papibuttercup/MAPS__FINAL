@@ -15,6 +15,12 @@ public class Order {
     public String deliveryAddress;
     public String customerName;
     public String customerPhone;
+    public String productId;
+    public String productName;
+    public double price;
+    public int quantity;
+    public String imageUrl;
+    public String paymentMethod;
 
     // Required empty constructor for Firestore
     public Order() {}

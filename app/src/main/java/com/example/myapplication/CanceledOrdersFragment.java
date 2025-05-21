@@ -16,7 +16,7 @@ import com.google.firebase.firestore.Query;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FinishedOrdersFragment extends Fragment {
+public class CanceledOrdersFragment extends Fragment {
     private RecyclerView recyclerView;
     private OrdersAdapter adapter;
     private List<Order> orders = new ArrayList<>();
@@ -40,6 +40,7 @@ public class FinishedOrdersFragment extends Fragment {
     private void loadOrders() {
         db.collection("orders")
             .whereEqualTo("sellerId", sellerId)
+            .whereEqualTo("status", "canceled")
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener((value, error) -> {
                 if (error != null) {
@@ -51,9 +52,7 @@ public class FinishedOrdersFragment extends Fragment {
                     for (var doc : value) {
                         Order order = doc.toObject(Order.class);
                         order.orderId = doc.getId();
-                        if (order.status != null && (order.status.equalsIgnoreCase("completed") || order.status.equalsIgnoreCase("rejected"))) {
-                            orders.add(order);
-                        }
+                        orders.add(order);
                     }
                 }
                 adapter.notifyDataSetChanged();

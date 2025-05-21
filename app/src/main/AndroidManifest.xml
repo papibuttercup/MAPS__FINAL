@@ -151,5 +151,11 @@
             android:theme="@style/Theme.MyApplication" />
 
         <activity android:name=".CustomerChatListActivity" />
+
+        <activity android:name=".CustomerOrdersActivity" />
+
+        <activity
+            android:name=".SellerCanceledOrdersActivity"
+            android:exported="false" />
     </application>
 </manifest>

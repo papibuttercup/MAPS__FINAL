@@ -16,12 +16,12 @@ import com.google.firebase.firestore.Query;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FinishedOrdersFragment extends Fragment {
+public class CustomerPendingOrdersFragment extends Fragment {
     private RecyclerView recyclerView;
     private OrdersAdapter adapter;
     private List<Order> orders = new ArrayList<>();
     private FirebaseFirestore db;
-    private String sellerId;
+    private String customerId;
 
     @Nullable
     @Override
@@ -29,17 +29,18 @@ public class FinishedOrdersFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_orders_list, container, false);
         recyclerView = view.findViewById(R.id.recyclerOrders);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        adapter = new OrdersAdapter(orders, false);
+        adapter = new OrdersAdapter(orders, true);
         recyclerView.setAdapter(adapter);
         db = FirebaseFirestore.getInstance();
-        sellerId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        customerId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         loadOrders();
         return view;
     }
 
     private void loadOrders() {
         db.collection("orders")
-            .whereEqualTo("sellerId", sellerId)
+            .whereEqualTo("customerId", customerId)
+            .whereEqualTo("status", "pending")
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener((value, error) -> {
                 if (error != null) {
@@ -51,9 +52,7 @@ public class FinishedOrdersFragment extends Fragment {
                     for (var doc : value) {
                         Order order = doc.toObject(Order.class);
                         order.orderId = doc.getId();
-                        if (order.status != null && (order.status.equalsIgnoreCase("completed") || order.status.equalsIgnoreCase("rejected"))) {
-                            orders.add(order);
-                        }
+                        orders.add(order);
                     }
                 }
                 adapter.notifyDataSetChanged();

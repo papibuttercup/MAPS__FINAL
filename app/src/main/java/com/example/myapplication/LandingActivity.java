@@ -31,6 +31,9 @@ public class LandingActivity extends AppCompatActivity {
             } else if (itemId == R.id.navigation_home) {
                 showHome();
                 return true;
+            } else if (itemId == R.id.navigation_orders) {
+                startActivity(new Intent(this, CustomerOrdersActivity.class));
+                return true;
             }
             return false;
         });

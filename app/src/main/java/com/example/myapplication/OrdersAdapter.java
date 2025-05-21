@@ -1,5 +1,6 @@
 package com.example.myapplication;
 
+import android.app.AlertDialog;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,11 +18,22 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
     private List<Order> orders;
     private FirebaseFirestore db;
     private SimpleDateFormat dateFormat;
+    private boolean isCustomerView;
 
-    public OrdersAdapter(List<Order> orders) {
+    public interface OnOrderClickListener {
+        void onOrderClick(Order order);
+    }
+    private OnOrderClickListener listener;
+
+    public OrdersAdapter(List<Order> orders, boolean isCustomerView) {
         this.orders = orders;
         this.db = FirebaseFirestore.getInstance();
         this.dateFormat = new SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault());
+        this.isCustomerView = isCustomerView;
+    }
+
+    public void setOnOrderClickListener(OnOrderClickListener listener) {
+        this.listener = listener;
     }
 
     @NonNull
@@ -36,46 +48,86 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Order order = orders.get(position);
         
-        holder.orderId.setText("Order #" + order.orderId);
+        holder.orderId.setText("Order #" + (order.orderId != null ? order.orderId : ""));
         holder.customerInfo.setText(String.format("Customer: %s\nPhone: %s", 
-            order.customerName, order.customerPhone));
+            order.customerName != null ? order.customerName : "Unknown",
+            order.customerPhone != null ? order.customerPhone : "Unknown"));
+        
+        // Handle null products list
+        int itemCount = order.products != null ? order.products.size() : 0;
         holder.orderDetails.setText(String.format("Items: %d\nDelivery: %s", 
-            order.products.size(), order.deliveryAddress));
+            itemCount,
+            order.deliveryAddress != null ? order.deliveryAddress : "No address"));
+            
         holder.totalPrice.setText(String.format("Total: ₱%.2f", order.totalPrice));
         holder.orderStatus.setText(String.format("Status: %s\nDate: %s", 
-            order.status, dateFormat.format(order.timestamp.toDate())));
+            getFriendlyStatus(order.status),
+            order.timestamp != null ? dateFormat.format(order.timestamp.toDate()) : "Unknown"));
 
-        // Show/hide buttons based on order status
+        // Show/hide buttons based on view type and order status
         holder.btnAccept.setVisibility(View.GONE);
         holder.btnReject.setVisibility(View.GONE);
         holder.btnComplete.setVisibility(View.GONE);
+        holder.btnCancel.setVisibility(View.GONE);
 
-        if (order.status != null) {
-            switch (order.status.toLowerCase()) {
-                case "pending":
-                    holder.btnAccept.setVisibility(View.VISIBLE);
-                    holder.btnReject.setVisibility(View.VISIBLE);
-                    break;
-                case "accepted":
-                    holder.btnComplete.setVisibility(View.VISIBLE);
-                    holder.btnComplete.setText("Mark as Delivered");
-                    break;
-                // No buttons for completed/rejected
+        if (isCustomerView) {
+            // For customer view, only show cancel button for pending orders
+            if (order.status != null && order.status.equalsIgnoreCase("pending")) {
+                holder.btnCancel.setVisibility(View.VISIBLE);
+            }
+        } else {
+            // For seller view, show accept/reject for pending orders
+            if (order.status != null) {
+                switch (order.status.toLowerCase()) {
+                    case "pending":
+                        holder.btnAccept.setVisibility(View.VISIBLE);
+                        holder.btnReject.setVisibility(View.VISIBLE);
+                        break;
+                    case "accepted":
+                        holder.btnComplete.setVisibility(View.VISIBLE);
+                        holder.btnComplete.setText("Mark as Delivered");
+                        break;
+                }
             }
         }
 
         // Set up button click listeners
-        holder.btnAccept.setOnClickListener(v -> {
-            updateOrderStatus(order.orderId, "accepted", holder.itemView.getContext(), () -> {
-                int pos = holder.getAdapterPosition();
-                if (pos != RecyclerView.NO_POSITION) {
-                    orders.remove(pos);
-                    notifyItemRemoved(pos);
-                }
-            });
+        if (order.orderId != null) {
+            if (isCustomerView) {
+                holder.btnCancel.setOnClickListener(v -> {
+                    new AlertDialog.Builder(v.getContext())
+                        .setTitle("Cancel Order")
+                        .setMessage("Are you sure you want to cancel this order?")
+                        .setPositiveButton("Yes", (dialog, which) -> {
+                            updateOrderStatus(order.orderId, "canceled", v.getContext(), () -> {
+                                int pos = holder.getAdapterPosition();
+                                if (pos != RecyclerView.NO_POSITION) {
+                                    orders.remove(pos);
+                                    notifyItemRemoved(pos);
+                                }
+                            });
+                        })
+                        .setNegativeButton("No", null)
+                        .show();
+                });
+            } else {
+                holder.btnAccept.setOnClickListener(v -> {
+                    updateOrderStatus(order.orderId, "accepted", holder.itemView.getContext(), () -> {
+                        int pos = holder.getAdapterPosition();
+                        if (pos != RecyclerView.NO_POSITION) {
+                            orders.remove(pos);
+                            notifyItemRemoved(pos);
+                        }
+                    });
+                });
+                holder.btnReject.setOnClickListener(v -> updateOrderStatus(order.orderId, "rejected", holder.itemView.getContext(), null));
+                holder.btnComplete.setOnClickListener(v -> updateOrderStatus(order.orderId, "completed", holder.itemView.getContext(), null));
+            }
+        }
+
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) listener.onOrderClick(order);
         });
-        holder.btnReject.setOnClickListener(v -> updateOrderStatus(order.orderId, "rejected", holder.itemView.getContext(), null));
-        holder.btnComplete.setOnClickListener(v -> updateOrderStatus(order.orderId, "completed", holder.itemView.getContext(), null));
     }
 
     private void updateOrderStatus(String orderId, String newStatus, android.content.Context context, Runnable onSuccess) {
@@ -93,6 +145,18 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
             });
     }
 
+    private String getFriendlyStatus(String status) {
+        if (status == null) return "Unknown";
+        switch (status.toLowerCase()) {
+            case "pending": return "Pending (Waiting for seller)";
+            case "accepted": return "Accepted (On way for delivery)";
+            case "completed": return "Delivered";
+            case "rejected": return "Rejected";
+            case "canceled": return "Canceled";
+            default: return status;
+        }
+    }
+
     @Override
     public int getItemCount() {
         return orders.size();
@@ -100,7 +164,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView orderId, customerInfo, orderDetails, totalPrice, orderStatus;
-        Button btnAccept, btnReject, btnComplete;
+        Button btnAccept, btnReject, btnComplete, btnCancel;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -112,6 +176,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
             btnAccept = itemView.findViewById(R.id.btnAccept);
             btnReject = itemView.findViewById(R.id.btnReject);
             btnComplete = itemView.findViewById(R.id.btnComplete);
+            btnCancel = itemView.findViewById(R.id.btnCancel);
         }
     }
 } 
