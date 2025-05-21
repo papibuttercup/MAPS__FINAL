@@ -63,6 +63,31 @@ public class BuyNowActivity extends AppCompatActivity {
         spinnerBarangay = findViewById(R.id.spinnerBarangay);
         etAdditionalDetails = findViewById(R.id.etAdditionalDetails);
         tvCity = findViewById(R.id.tvCity);
+
+        // Make name field read-only
+        etName.setEnabled(false);
+        etName.setFocusable(false);
+        etName.setClickable(false);
+
+        // Load user's name from Firestore
+        db.collection("users").document(userId)
+            .get()
+            .addOnSuccessListener(documentSnapshot -> {
+                if (documentSnapshot.exists()) {
+                    String firstName = documentSnapshot.getString("firstName");
+                    String lastName = documentSnapshot.getString("lastName");
+                    String fullName = "";
+                    if (firstName != null) fullName += firstName;
+                    if (lastName != null) fullName += (fullName.isEmpty() ? "" : " ") + lastName;
+                    if (!fullName.isEmpty()) {
+                        etName.setText(fullName);
+                    }
+                }
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(this, "Error loading user data: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            });
+
         // Set up barangay spinner
         ArrayAdapter<CharSequence> barangayAdapter = ArrayAdapter.createFromResource(
             this, R.array.baguio_barangays, android.R.layout.simple_spinner_item);
@@ -96,8 +121,12 @@ public class BuyNowActivity extends AppCompatActivity {
             String additionalDetails = etAdditionalDetails.getText().toString().trim();
             String phone = etPhone.getText().toString().trim();
             String name = etName.getText().toString().trim();
-            if (TextUtils.isEmpty(selectedBarangay) || TextUtils.isEmpty(address) || TextUtils.isEmpty(phone) || TextUtils.isEmpty(name)) {
-                Toast.makeText(this, "Please fill all fields (except additional details)", Toast.LENGTH_SHORT).show();
+            if (TextUtils.isEmpty(selectedBarangay) || TextUtils.isEmpty(address) || TextUtils.isEmpty(phone)) {
+                Toast.makeText(this, "Please fill all required fields (except additional details)", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (TextUtils.isEmpty(name)) {
+                Toast.makeText(this, "Error: Could not load your name. Please try again later.", Toast.LENGTH_SHORT).show();
                 return;
             }
             if (productStock < quantity) {

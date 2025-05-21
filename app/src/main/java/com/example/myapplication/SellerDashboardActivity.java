@@ -31,16 +31,12 @@ public class SellerDashboardActivity extends AppCompatActivity {
         toolbar.bringToFront();
 
         MaterialCardView cardListItem = findViewById(R.id.cardListItem);
-        MaterialCardView cardShopLocation = findViewById(R.id.cardShopLocation);
         MaterialCardView cardOrders = findViewById(R.id.cardOrders);
         BottomNavigationView bottomNavigation = findViewById(R.id.bottomNavigation);
         ImageButton btnSellerChats = findViewById(R.id.btnSellerChats);
 
         cardListItem.setOnClickListener(v -> {
             startActivity(new Intent(this, ListNewItemActivity.class));
-        });
-        cardShopLocation.setOnClickListener(v -> {
-            startActivity(new Intent(this, ShopLocationActivity.class));
         });
         cardOrders.setOnClickListener(v -> {
             startActivity(new Intent(this, SellerOrdersActivity.class));
