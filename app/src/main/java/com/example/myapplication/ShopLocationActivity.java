@@ -32,6 +32,10 @@ public class ShopLocationActivity extends AppCompatActivity implements OnMapRead
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Initialize MapLibre
+        MapLibre.getInstance(this);
+
         setContentView(R.layout.activity_shop_location);
 
         // Handle back press
@@ -41,9 +45,6 @@ public class ShopLocationActivity extends AppCompatActivity implements OnMapRead
                 finish();
             }
         });
-
-        // Initialize MapLibre
-        MapLibre.getInstance(this);
 
         // Get seller ID and shop name from intent
         sellerId = getIntent().getStringExtra("sellerId");
@@ -79,7 +80,9 @@ public class ShopLocationActivity extends AppCompatActivity implements OnMapRead
     public void onMapReady(@NonNull MapLibreMap mapLibreMap) {
         this.maplibreMap = mapLibreMap;
 
-        String styleUrl = "https://api.maptiler.com/maps/streets/style.json?key=" + getString(R.string.maptiler_api_key);
+        String mapTilerApiKey = BuildConfig.MAPTILER_API_KEY;
+        String mapId = "streets-v2";
+        String styleUrl = "https://api.maptiler.com/maps/" + mapId + "/style.json?key=" + mapTilerApiKey;
         mapLibreMap.setStyle(new Style.Builder().fromUri(styleUrl), style -> {
             // Load shop location
             loadShopLocation();
