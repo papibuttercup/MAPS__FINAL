@@ -21,9 +21,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class ShopProductsFragment extends Fragment implements CategoryAdapter.OnCategoryClickListener {
     private static final String ARG_SELLER_ID = "sellerId";
@@ -144,7 +142,89 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
             String[] subcats = res.getStringArray(arrayId);
             for (String subcat : subcats) {
                 subCategories.add(subcat);
-                subCategoryIcons.add(R.drawable.placeholder_image);
+                if (mainCategory.equals("Men") && subcat.equals("Shirts")) {
+                    subCategoryIcons.add(R.drawable.men_shirt);
+                } else if (mainCategory.equals("Men") && subcat.equals("T-Shirts")) {
+                    subCategoryIcons.add(R.drawable.men_tshirt);
+                } else if (mainCategory.equals("Men") && subcat.equals("Pants")) {
+                    subCategoryIcons.add(R.drawable.men_pants);
+                } else if (mainCategory.equals("Men") && subcat.equals("Shorts")) {
+                    subCategoryIcons.add(R.drawable.men_shorts);
+                } else if (mainCategory.equals("Men") && subcat.equals("Jackets")) {
+                    subCategoryIcons.add(R.drawable.men_jacket);
+                } else if (mainCategory.equals("Men") && subcat.equals("Suits")) {
+                    subCategoryIcons.add(R.drawable.men_suit);
+                } else if (mainCategory.equals("Men") && subcat.equals("Sweaters")) {
+                    subCategoryIcons.add(R.drawable.men_sweater);
+                } else if (mainCategory.equals("Men") && subcat.equals("Hoodies")) {
+                    subCategoryIcons.add(R.drawable.men_hoodie);
+                } else if (mainCategory.equals("Men") && subcat.equals("Activewear")) {
+                    subCategoryIcons.add(R.drawable.men_activewear);
+                } else if (mainCategory.equals("Men") && subcat.equals("Underwear")) {
+                    subCategoryIcons.add(R.drawable.men_underwear);
+                } else if (mainCategory.equals("Men") && subcat.equals("Sleepwear")) {
+                    subCategoryIcons.add(R.drawable.men_sleepwear);
+                } else if (mainCategory.equals("Men") && subcat.equals("Jeans")) {
+                    subCategoryIcons.add(R.drawable.men_jeans);
+                } else if (mainCategory.equals("Women") && subcat.equals("Jackets")) {
+                    subCategoryIcons.add(R.drawable.women_jacket);
+                } else if (mainCategory.equals("Women") && subcat.equals("Tops")) {
+                    subCategoryIcons.add(R.drawable.women_top);
+                } else if (mainCategory.equals("Women") && subcat.equals("T-Shirts")) {
+                    subCategoryIcons.add(R.drawable.women_tshirt);
+                } else if (mainCategory.equals("Women") && subcat.equals("Dress")) {
+                    subCategoryIcons.add(R.drawable.women_dress);
+                } else if (mainCategory.equals("Women") && subcat.equals("Suits")) {
+                    subCategoryIcons.add(R.drawable.women_suit);
+                } else if (mainCategory.equals("Women") && subcat.equals("Sweaters")) {
+                    subCategoryIcons.add(R.drawable.women_sweater);
+                } else if (mainCategory.equals("Women") && subcat.equals("Hoodies")) {
+                    subCategoryIcons.add(R.drawable.women_hoodie);
+                } else if (mainCategory.equals("Women") && subcat.equals("Activewear")) {
+                    subCategoryIcons.add(R.drawable.women_activewear);
+                } else if (mainCategory.equals("Women") && subcat.equals("Beach wear")) {
+                    subCategoryIcons.add(R.drawable.women_beachwear);
+                } else if (mainCategory.equals("Women") && subcat.equals("Underwear")) {
+                    subCategoryIcons.add(R.drawable.women_underwear);
+                } else if (mainCategory.equals("Women") && subcat.equals("Sleepwear")) {
+                    subCategoryIcons.add(R.drawable.women_sleepwear);
+                } else if (mainCategory.equals("Women") && subcat.equals("Jeans")) {
+                    subCategoryIcons.add(R.drawable.women_jean);
+                } else if (mainCategory.equals("Women") && subcat.equals("Shorts")) {
+                    subCategoryIcons.add(R.drawable.women_short);
+                } else if (mainCategory.equals("Women") && subcat.equals("Skirts")) {
+                    subCategoryIcons.add(R.drawable.women_skirt);
+                } else if (mainCategory.equals("Women") && subcat.equals("Outerwear")) {
+                    subCategoryIcons.add(R.drawable.women_outwear);
+                } else if (mainCategory.equals("Women") && subcat.equals("Pants")) {
+                    subCategoryIcons.add(R.drawable.women_pants);
+                } else if (mainCategory.equals("Women") && subcat.equals("Shirts")) {
+                    subCategoryIcons.add(R.drawable.women_shirt);
+                } else if (mainCategory.equals("Kids") && subcat.equals("Jackets")) {
+                    subCategoryIcons.add(R.drawable.kid_jacket);
+                } else if (mainCategory.equals("Kids") && subcat.equals("T-Shirts")) {
+                    subCategoryIcons.add(R.drawable.kid_tshirt);
+                } else if (mainCategory.equals("Kids") && (subcat.equals("Dress") || subcat.equals("Dresses"))) {
+                    subCategoryIcons.add(R.drawable.kid_dress);
+                } else if (mainCategory.equals("Kids") && subcat.equals("Sweaters")) {
+                    subCategoryIcons.add(R.drawable.kid_sweater);
+                } else if (mainCategory.equals("Kids") && subcat.equals("Hoodies")) {
+                    subCategoryIcons.add(R.drawable.kid_hoodie);
+                } else if (mainCategory.equals("Kids") && subcat.equals("Underwear")) {
+                    subCategoryIcons.add(R.drawable.kid_underwear);
+                } else if (mainCategory.equals("Kids") && subcat.equals("Sleepwear")) {
+                    subCategoryIcons.add(R.drawable.kid_sleepwear);
+                } else if (mainCategory.equals("Kids") && subcat.equals("Shorts")) {
+                    subCategoryIcons.add(R.drawable.kid_short);
+                } else if (mainCategory.equals("Kids") && subcat.equals("Skirts")) {
+                    subCategoryIcons.add(R.drawable.kid_skirt);
+                } else if (mainCategory.equals("Kids") && subcat.equals("Pants")) {
+                    subCategoryIcons.add(R.drawable.kid_pants);
+                } else if (mainCategory.equals("Kids") && subcat.equals("Shirts")) {
+                    subCategoryIcons.add(R.drawable.kid_shirt);
+                } else {
+                    subCategoryIcons.add(R.drawable.placeholder_image);
+                }
             }
         }
         subcategoryAdapter.notifyDataSetChanged();
