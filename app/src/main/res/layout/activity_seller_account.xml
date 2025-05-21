@@ -189,6 +189,18 @@
                             android:layout_marginEnd="4dp" />
 
                         <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSave"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Save Photo"
+                            android:textAllCaps="false"
+                            app:icon="@drawable/ic_save"
+                            app:iconGravity="textStart"
+                            android:layout_marginEnd="4dp"
+                            android:visibility="gone" />
+
+                        <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnDeleteCoverPhoto"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"

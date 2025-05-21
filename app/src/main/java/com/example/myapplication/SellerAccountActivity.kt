@@ -121,10 +121,16 @@ class SellerAccountActivity : AppCompatActivity() {
             startActivityForResult(intent, 200)
         }
 
-        // Set Cover Photo Button
+        // Set Cover Photo Button - Always enabled
+        binding.btnSetCoverPhoto.isEnabled = true
         binding.btnSetCoverPhoto.setOnClickListener {
             val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
             startActivityForResult(intent, PICK_COVER_PHOTO_REQUEST)
+        }
+
+        // Save Button
+        binding.btnSave.setOnClickListener {
+            saveShopProfile()
         }
 
         // Delete Cover Photo Button
@@ -145,6 +151,7 @@ class SellerAccountActivity : AppCompatActivity() {
                                 binding.ivCoverPhoto.setImageResource(R.drawable.ic_add_photo)
                                 binding.btnDeleteCoverPhoto.visibility = android.view.View.GONE
                                 binding.btnSetCoverPhoto.text = "Set Cover Photo"
+                                binding.btnSave.visibility = android.view.View.GONE
                                 coverPhotoUrl = null
                                 Toast.makeText(this, "Cover photo deleted successfully", Toast.LENGTH_SHORT).show()
                             }
@@ -157,6 +164,7 @@ class SellerAccountActivity : AppCompatActivity() {
                         binding.ivCoverPhoto.setImageResource(R.drawable.ic_add_photo)
                         binding.btnDeleteCoverPhoto.visibility = android.view.View.GONE
                         binding.btnSetCoverPhoto.text = "Set Cover Photo"
+                        binding.btnSave.visibility = android.view.View.GONE
                         coverPhotoUrl = null
                         Toast.makeText(this, "Cover photo deleted successfully", Toast.LENGTH_SHORT).show()
                     }
@@ -167,9 +175,9 @@ class SellerAccountActivity : AppCompatActivity() {
                 }
         }
 
-        // Save/Update Button
+        // Edit Profile Button - Now just enables editing
         binding.btnEditProfile.setOnClickListener {
-            saveShopProfile()
+            enableEditing()
         }
 
         // Change Password Button
@@ -269,8 +277,11 @@ class SellerAccountActivity : AppCompatActivity() {
                     data?.data?.let { uri ->
                         coverPhotoUri = uri
                         binding.ivCoverPhoto.setImageURI(uri)
-                        binding.btnDeleteCoverPhoto.visibility = android.view.View.VISIBLE
+                        // Show save button when a new photo is selected
+                        binding.btnSave.visibility = android.view.View.VISIBLE
+                        binding.btnDeleteCoverPhoto.visibility = android.view.View.GONE
                         binding.btnSetCoverPhoto.text = "Change Cover Photo"
+                        Toast.makeText(this, "Cover photo selected. Click Save Photo to save your changes!", Toast.LENGTH_LONG).show()
                     }
                 }
                 200 -> {
@@ -308,6 +319,18 @@ class SellerAccountActivity : AppCompatActivity() {
         }
     }
 
+    private fun enableEditing() {
+        // Enable editing of fields
+        binding.etShopName.isEnabled = true
+        binding.etShopDescription.isEnabled = true
+        binding.btnIdentifyLocation.isEnabled = true
+        
+        // Don't disable the cover photo button
+        binding.btnSetCoverPhoto.isEnabled = true
+        
+        Toast.makeText(this, "Edit mode enabled. Make your changes and click Save when done.", Toast.LENGTH_LONG).show()
+    }
+
     private fun saveShopProfile() {
         val userId = auth.currentUser?.uid ?: return
         val shopName = binding.etShopName.text.toString().trim()
@@ -319,6 +342,7 @@ class SellerAccountActivity : AppCompatActivity() {
         }
 
         showProgressDialog("Saving profile...")
+        Log.d("SellerAccount", "Starting profile save for user: $userId")
 
         val updates = mutableMapOf(
             "shopName" to shopName,
@@ -326,36 +350,64 @@ class SellerAccountActivity : AppCompatActivity() {
         )
 
         // Handle cover photo upload if changed
-        coverPhotoUri?.let { uri ->
+        if (coverPhotoUri != null) {
+            Log.d("SellerAccount", "Cover photo URI exists, starting upload")
             val storageRef = FirebaseStorage.getInstance().reference
                 .child("cover_photos")
                 .child(userId)
                 .child("cover_photo.jpg")
 
-            storageRef.putFile(uri)
+            storageRef.putFile(coverPhotoUri!!)
                 .addOnSuccessListener {
+                    Log.d("SellerAccount", "Cover photo upload successful, getting download URL")
                     storageRef.downloadUrl.addOnSuccessListener { downloadUri ->
+                        Log.d("SellerAccount", "Got download URL: ${downloadUri.toString()}")
                         updates["coverPhotoUrl"] = downloadUri.toString()
                         saveToFirestore(userId, updates)
+                        // Update UI after successful save
+                        binding.btnSave.visibility = android.view.View.GONE
+                        binding.btnDeleteCoverPhoto.visibility = android.view.View.VISIBLE
+                        binding.btnSetCoverPhoto.text = "Change Cover Photo"
+                        coverPhotoUrl = downloadUri.toString()
+                    }.addOnFailureListener { e ->
+                        Log.e("SellerAccount", "Failed to get download URL", e)
+                        hideProgressDialog()
+                        Toast.makeText(this, "Failed to get cover photo URL: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
                 }
                 .addOnFailureListener { e ->
+                    Log.e("SellerAccount", "Failed to upload cover photo", e)
                     hideProgressDialog()
                     Toast.makeText(this, "Failed to upload cover photo: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
-        } ?: run {
+                .addOnProgressListener { taskSnapshot ->
+                    val progress = (100.0 * taskSnapshot.bytesTransferred / taskSnapshot.totalByteCount).toInt()
+                    Log.d("SellerAccount", "Upload progress: $progress%")
+                }
+        } else {
+            Log.d("SellerAccount", "No cover photo to upload, saving to Firestore directly")
             saveToFirestore(userId, updates)
         }
     }
 
     private fun saveToFirestore(userId: String, updates: Map<String, Any>) {
+        Log.d("SellerAccount", "Saving to Firestore with updates: $updates")
         db.collection("sellers").document(userId)
             .update(updates)
             .addOnSuccessListener {
+                Log.d("SellerAccount", "Profile updated successfully in Firestore")
                 hideProgressDialog()
-                Toast.makeText(this, "Profile updated successfully", Toast.LENGTH_SHORT).show()
+                // Check if a cover photo was updated
+                if (updates.containsKey("coverPhotoUrl")) {
+                    Toast.makeText(this, "Profile and cover photo updated successfully!", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this, "Profile updated successfully", Toast.LENGTH_SHORT).show()
+                }
+                // Clear the cover photo URI after successful save
+                coverPhotoUri = null
             }
             .addOnFailureListener { e ->
+                Log.e("SellerAccount", "Failed to update profile in Firestore", e)
                 hideProgressDialog()
                 Toast.makeText(this, "Failed to update profile: ${e.message}", Toast.LENGTH_SHORT).show()
             }
