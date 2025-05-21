@@ -3,9 +3,11 @@ package com.example.myapplication;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+import com.bumptech.glide.Glide;
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Locale;
@@ -47,6 +49,21 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
     @Override
     public void onBindViewHolder(@NonNull MessageViewHolder holder, int position) {
         Message message = messages.get(position);
+        // Product card logic
+        if (message.getProductId() != null && message.getProductName() != null) {
+            holder.productCard.setVisibility(View.VISIBLE);
+            holder.productName.setText(message.getProductName());
+            holder.productPrice.setText("₱" + message.getProductPrice());
+            if (message.getProductImage() != null && !message.getProductImage().isEmpty()) {
+                Glide.with(holder.productImage.getContext())
+                    .load(message.getProductImage())
+                    .into(holder.productImage);
+            } else {
+                holder.productImage.setImageResource(R.drawable.ic_image_placeholder);
+            }
+        } else {
+            holder.productCard.setVisibility(View.GONE);
+        }
         holder.messageText.setText(message.getContent());
         holder.timeText.setText(timeFormat.format(new java.util.Date(message.getTimestamp())));
     }
@@ -59,11 +76,19 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
     static class MessageViewHolder extends RecyclerView.ViewHolder {
         TextView messageText;
         TextView timeText;
+        View productCard;
+        ImageView productImage;
+        TextView productName;
+        TextView productPrice;
 
         MessageViewHolder(View itemView) {
             super(itemView);
             messageText = itemView.findViewById(R.id.messageText);
             timeText = itemView.findViewById(R.id.timeText);
+            productCard = itemView.findViewById(R.id.productCard);
+            productImage = itemView.findViewById(R.id.productImage);
+            productName = itemView.findViewById(R.id.productName);
+            productPrice = itemView.findViewById(R.id.productPrice);
         }
     }
 } 

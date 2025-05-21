@@ -42,6 +42,8 @@ public class ChatActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private String productId;
     private boolean isCustomerInitiator;
+    private boolean hasSentProductMessage = false;
+    private String currentProductImageUrl = null;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -96,8 +98,23 @@ public class ChatActivity extends AppCompatActivity {
         adapter = new MessagesAdapter(messageList, currentUserId);
         recyclerMessages.setAdapter(adapter);
 
+        // Get product info from intent (for instant display)
+        String productNameStr = getIntent().getStringExtra("productName");
+        String productImageStr = getIntent().getStringExtra("productImage");
+        double productPriceVal = getIntent().getDoubleExtra("productPrice", 0.0);
+        if (productImageStr != null && !productImageStr.isEmpty()) {
+            currentProductImageUrl = productImageStr;
+        }
+
         // Show/hide product card
         if (productId != null) {
+            productCard.setVisibility(View.VISIBLE);
+            if (productNameStr != null && !productNameStr.isEmpty()) productName.setText(productNameStr);
+            if (productPriceVal > 0) productPrice.setText("₱" + productPriceVal);
+            if (productImageStr != null && !productImageStr.isEmpty()) {
+                Glide.with(this).load(productImageStr).into(productImage);
+                currentProductImageUrl = productImageStr;
+            }
             loadProductDetails();
         } else {
             productCard.setVisibility(View.GONE);
@@ -203,6 +220,7 @@ public class ChatActivity extends AppCompatActivity {
                                 Glide.with(this)
                                     .load(product.coverPhotoUri)
                                     .into(productImage);
+                                currentProductImageUrl = product.coverPhotoUri;
                             }
                         }
                     }
@@ -225,11 +243,15 @@ public class ChatActivity extends AppCompatActivity {
                     return;
                 }
 
+                hasSentProductMessage = false;
                 if (value != null) {
                     messageList.clear();
                     for (QueryDocumentSnapshot doc : value) {
                         Message message = doc.toObject(Message.class);
                         messageList.add(message);
+                        if (productId != null && productId.equals(message.getProductId())) {
+                            hasSentProductMessage = true;
+                        }
                     }
                     adapter.notifyDataSetChanged();
                     if (!messageList.isEmpty()) {
@@ -246,6 +268,21 @@ public class ChatActivity extends AppCompatActivity {
         message.setSenderId(currentUserId);
         message.setContent(messageText);
         message.setTimestamp(System.currentTimeMillis());
+
+        // Only attach product info if not already sent
+        if (!hasSentProductMessage && productCard.getVisibility() == View.VISIBLE && productId != null) {
+            message.setProductId(productId);
+            message.setProductName(productName.getText().toString());
+            message.setProductImage(currentProductImageUrl);
+            try {
+                String priceStr = productPrice.getText().toString().replace("₱", "").replace(",", "").trim();
+                message.setProductPrice(Double.parseDouble(priceStr));
+            } catch (Exception e) {
+                message.setProductPrice(0.0);
+            }
+            hasSentProductMessage = true;
+        }
+
         db.collection("chats").document(chatId)
             .collection("messages")
             .add(message)
@@ -254,7 +291,6 @@ public class ChatActivity extends AppCompatActivity {
                 Map<String, Object> updates = new HashMap<>();
                 updates.put("lastMessage", messageText);
                 updates.put("lastMessageTime", Timestamp.now());
-                // If customer sends, mark unseen for seller
                 if (isCustomerInitiator || !currentUserId.equals(otherUserId)) {
                     updates.put("unseenBySeller", true);
                 }

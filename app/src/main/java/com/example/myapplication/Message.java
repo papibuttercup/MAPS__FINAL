@@ -5,6 +5,10 @@ public class Message {
     private String content;
     private long timestamp;
     private boolean isRead;
+    private String productId;
+    private String productName;
+    private String productImage;
+    private double productPrice;
 
     public Message() {
         // Required empty constructor for Firestore
@@ -47,5 +51,37 @@ public class Message {
 
     public void setRead(boolean read) {
         isRead = read;
+    }
+
+    public String getProductId() {
+        return productId;
+    }
+
+    public void setProductId(String productId) {
+        this.productId = productId;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
+
+    public String getProductImage() {
+        return productImage;
+    }
+
+    public void setProductImage(String productImage) {
+        this.productImage = productImage;
+    }
+
+    public double getProductPrice() {
+        return productPrice;
+    }
+
+    public void setProductPrice(double productPrice) {
+        this.productPrice = productPrice;
     }
 } 
