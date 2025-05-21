@@ -39,6 +39,7 @@ import java.util.HashSet;
 import java.util.Set;
 import com.google.android.material.card.MaterialCardView;
 import android.widget.LinearLayout;
+import com.google.firebase.firestore.FieldValue;
 
 public class BuyNowActivity extends AppCompatActivity {
     private static final String TAG = "BuyNowActivity";
@@ -579,31 +580,15 @@ public class BuyNowActivity extends AppCompatActivity {
         }
         String currentUserId = currentUser.getUid();
 
-        // Use Firestore's auto-generated order ID
-        DocumentReference orderRef = FirebaseFirestore.getInstance().collection("orders").document();
-        String orderId = orderRef.getId();
-
-        Map<String, Object> orderData = new HashMap<>();
-        orderData.put("orderId", orderId);
-        orderData.put("productId", productId);
-        orderData.put("sellerId", sellerId);
-        orderData.put("productName", productName);
-        orderData.put("productPrice", productPrice);
-        orderData.put("quantity", selectedQuantity);
-        orderData.put("selectedColor", selectedColor);
-        orderData.put("selectedSize", selectedSize);
-        orderData.put("totalAmount", productPrice * selectedQuantity);
-        orderData.put("customerId", currentUserId);
-        orderData.put("additionalDetails", etAdditionalDetails.getText().toString());
-        orderData.put("timestamp", System.currentTimeMillis());
-        orderData.put("status", "Pending");
+        // Calculate total amount
+        double totalAmount = productPrice * selectedQuantity;
 
         // Start transaction to update stock and create order
         FirebaseFirestore.getInstance().runTransaction(transaction -> {
             // Get current product data
-            DocumentSnapshot productDoc = transaction.get(
-                FirebaseFirestore.getInstance().collection("products").document(productId)
-            );
+            DocumentReference productRef = FirebaseFirestore.getInstance()
+                .collection("products").document(productId);
+            DocumentSnapshot productDoc = transaction.get(productRef);
 
             if (!productDoc.exists()) {
                 throw new FirebaseFirestoreException("Product not found", 
@@ -618,41 +603,84 @@ public class BuyNowActivity extends AppCompatActivity {
                     FirebaseFirestoreException.Code.NOT_FOUND);
             }
 
-            // Find and update the matching stock entry
-            boolean stockUpdated = false;
+            // Find and update the matching stock entry and calculate new total stock
+            boolean stockEntryUpdated = false;
+            long newTotalStock = 0;
             for (Map<String, Object> entry : stockEntries) {
                 String color = (String) entry.get("color");
                 String size = (String) entry.get("size");
-                if (color.equals(selectedColor) && size.equals(selectedSize)) {
-                    int currentStock = ((Long) entry.get("stock")).intValue();
-                    if (currentStock < selectedQuantity) {
-                        throw new FirebaseFirestoreException("Insufficient stock", 
-                            FirebaseFirestoreException.Code.FAILED_PRECONDITION);
+                Long currentStock = (Long) entry.get("stock");
+
+                if (color != null && size != null && currentStock != null) {
+                     if (color.equals(selectedColor) && size.equals(selectedSize)) {
+                        if (currentStock < selectedQuantity) {
+                            throw new FirebaseFirestoreException("Insufficient stock for selected variation", 
+                                FirebaseFirestoreException.Code.FAILED_PRECONDITION);
+                        }
+                        entry.put("stock", currentStock - selectedQuantity);
+                        stockEntryUpdated = true;
                     }
-                    entry.put("stock", currentStock - selectedQuantity);
-                    stockUpdated = true;
-                    break;
+                    // Sum up stock from all entries (after updating the relevant one)
+                    Long updatedStock = (Long) entry.get("stock");
+                    if (updatedStock != null) {
+                         newTotalStock += updatedStock;
+                    }
                 }
             }
 
-            if (!stockUpdated) {
-                throw new FirebaseFirestoreException("Selected combination not found", 
+            if (!stockEntryUpdated) {
+                throw new FirebaseFirestoreException("Selected color/size combination not found in stock entries", 
                     FirebaseFirestoreException.Code.NOT_FOUND);
             }
 
-            // Update product stock entries
-            transaction.update(
-                FirebaseFirestore.getInstance().collection("products").document(productId),
-                "stockEntries", stockEntries
-            );
+            // Update product document: stockEntries and the overall stock field
+            transaction.update(productRef, "stockEntries", stockEntries);
+            transaction.update(productRef, "stock", newTotalStock); // Update the total stock field
 
-            // Create order
+            // Create order in orders collection
+            DocumentReference orderRef = FirebaseFirestore.getInstance()
+                .collection("orders").document();
+            String orderId = orderRef.getId();
+            Map<String, Object> orderData = new HashMap<>();
+            orderData.put("productId", productId);
+            orderData.put("sellerId", sellerId);
+            orderData.put("productName", productName);
+            orderData.put("productPrice", productPrice);
+            orderData.put("quantity", selectedQuantity);
+            orderData.put("selectedColor", selectedColor);
+            orderData.put("selectedSize", selectedSize);
+            orderData.put("totalAmount", totalAmount);
+            orderData.put("customerId", currentUserId);
+            orderData.put("customerName", etName.getText().toString().trim());
+            orderData.put("customerPhone", etPhone.getText().toString().trim());
+            orderData.put("deliveryAddress", etAddress.getText().toString().trim() + ", " + selectedBarangay);
+            orderData.put("additionalDetails", etAdditionalDetails.getText().toString().trim());
+            orderData.put("timestamp", FieldValue.serverTimestamp());
+            orderData.put("status", "pending");
+            orderData.put("orderDate", new java.util.Date());
+            orderData.put("orderId", orderId);
             transaction.set(orderRef, orderData);
+
+            // Add order reference to customer's orders subcollection
+            DocumentReference customerOrderRef = FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(currentUserId)
+                .collection("orders")
+                .document(orderId);
+            transaction.set(customerOrderRef, orderData);
+
+            // Add order reference to seller's orders subcollection
+            DocumentReference sellerOrderRef = FirebaseFirestore.getInstance()
+                .collection("sellers")
+                .document(sellerId)
+                .collection("orders")
+                .document(orderId);
+            transaction.set(sellerOrderRef, orderData);
 
             return null;
         })
         .addOnSuccessListener(aVoid -> {
-            Toast.makeText(this, "Order placed successfully", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Order placed successfully! Total: ₱" + String.format("%.2f", totalAmount), Toast.LENGTH_LONG).show();
             finish();
         })
         .addOnFailureListener(e -> {

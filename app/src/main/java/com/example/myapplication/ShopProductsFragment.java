@@ -22,6 +22,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.List;
+import com.google.firebase.firestore.ListenerRegistration;
 
 public class ShopProductsFragment extends Fragment implements CategoryAdapter.OnCategoryClickListener {
     private static final String ARG_SELLER_ID = "sellerId";
@@ -42,6 +43,7 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
     private TextView shopTitle;
     private Spinner mainCategorySpinner;
     private ImageButton btnMessageShop;
+    private ListenerRegistration productListenerRegistration;
 
     public static ShopProductsFragment newInstance(String sellerId, String shopName) {
         ShopProductsFragment fragment = new ShopProductsFragment();
@@ -256,15 +258,30 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
     }
 
     private void loadAllProductsForSeller() {
-        db.collection("products")
+        if (sellerId == null) return;
+
+        // Stop previous listener if it exists
+        if (productListenerRegistration != null) {
+            productListenerRegistration.remove();
+        }
+
+        productListenerRegistration = db.collection("products")
             .whereEqualTo("sellerId", sellerId)
-            .get()
-            .addOnSuccessListener(queryDocumentSnapshots -> {
+            .addSnapshotListener((queryDocumentSnapshots, error) -> {
+                if (error != null) {
+                    Toast.makeText(getContext(), "Error loading products: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
                 products.clear();
-                for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                    Product product = doc.toObject(Product.class);
-                    product.id = doc.getId();
-                    products.add(product);
+                if (queryDocumentSnapshots != null) {
+                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                        Product product = doc.toObject(Product.class);
+                        if (product != null) {
+                            product.id = doc.getId();
+                            products.add(product);
+                        }
+                    }
                 }
                 productAdapter.notifyDataSetChanged();
             });
@@ -273,5 +290,14 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
     @Override
     public void onCategoryClick(String category) {
         selectSubCategory(category);
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        // Remove the snapshot listener when the view is destroyed
+        if (productListenerRegistration != null) {
+            productListenerRegistration.remove();
+        }
     }
 } 

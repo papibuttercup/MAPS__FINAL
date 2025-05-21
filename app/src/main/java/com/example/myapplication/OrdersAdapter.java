@@ -53,13 +53,22 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
             order.customerName != null ? order.customerName : "Unknown",
             order.customerPhone != null ? order.customerPhone : "Unknown"));
         
-        // Handle null products list
-        int itemCount = order.products != null ? order.products.size() : 0;
-        holder.orderDetails.setText(String.format("Items: %d\nDelivery: %s", 
-            itemCount,
+        // Format item details using individual product fields
+        StringBuilder itemDetails = new StringBuilder();
+        itemDetails.append("Items:\n");
+        itemDetails.append(String.format("- %s (x%d) - %s, %s", 
+            order.productName != null ? order.productName : "Unknown Product",
+            order.quantity > 0 ? order.quantity : 1, // Default to 1 if quantity is 0
+            order.selectedColor != null ? order.selectedColor : "N/A",
+            order.selectedSize != null ? order.selectedSize : "N/A"
+        ));
+        
+        itemDetails.append(String.format("\nDelivery: %s", 
             order.deliveryAddress != null ? order.deliveryAddress : "No address"));
+
+        holder.orderDetails.setText(itemDetails.toString());
             
-        holder.totalPrice.setText(String.format("Total: ₱%.2f", order.totalPrice));
+        holder.totalPrice.setText(String.format("Total: ₱%.2f", order.totalAmount));
         holder.orderStatus.setText(String.format("Status: %s\nDate: %s", 
             getFriendlyStatus(order.status),
             order.timestamp != null ? dateFormat.format(order.timestamp.toDate()) : "Unknown"));
