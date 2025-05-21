@@ -97,6 +97,16 @@
             android:layout_height="wrap_content"
             android:text="Help &amp; Support"
             android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/switchToSellerButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Switch back to Seller Mode"
+            android:layout_marginBottom="8dp"
+            android:backgroundTint="@color/primaryColor"
+            android:textColor="@android:color/white"
+            android:visibility="gone" />
     </LinearLayout>
 
     <!-- Logout Button -->

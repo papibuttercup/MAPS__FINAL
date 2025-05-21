@@ -15,26 +15,27 @@
             android:layout_height="wrap_content"
             android:text="Order Details"
             android:textSize="24sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:paddingBottom="8dp" />
 
         <TextView
             android:id="@+id/tvProductName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:textSize="18sp" />
+            android:layout_marginTop="8dp"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tvProductPrice"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:textColor="@color/colorPrimary"
+            android:layout_marginTop="4dp"
+            android:textColor="#222"
             android:textSize="16sp" />
 
-        <!-- New container for color options -->
+        <!-- Color Row -->
         <LinearLayout
-            android:id="@+id/layoutColorOptions"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -46,26 +47,33 @@
                 android:layout_height="wrap_content"
                 android:text="Color: "
                 android:textSize="16sp"
-                android:textColor="@color/textPrimary"/>
+                android:textColor="#222"/>
 
-            <!-- This LinearLayout will be populated programmatically with color dots/chips -->
+            <!-- Color options container for dynamic color chips/dots -->
             <LinearLayout
                 android:id="@+id/colorOptionsContainer"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:orientation="horizontal"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
                 android:gravity="center_vertical"/>
 
-            <!-- TextView to display the selected color name -->
+            <!-- Color dot (optional, can be used for selected color) -->
+            <View
+                android:id="@+id/viewColorDot"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="@drawable/color_dot_red"
+                android:layout_marginEnd="8dp"/>
+
             <TextView
                 android:id="@+id/tvSelectedColorName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:text="Red"
                 android:textSize="16sp"
-                android:textColor="@color/textSecondary"
-                android:layout_marginStart="8dp"/>
-
+                android:textColor="#222"/>
         </LinearLayout>
 
         <TextView
@@ -73,6 +81,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:text="Available Stock: 10"
             android:textSize="16sp" />
 
         <Spinner
@@ -151,15 +160,21 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:text="Total: ₱120.00"
             android:textSize="20sp"
             android:textStyle="bold" />
 
-        <com.google.android.material.button.MaterialButton
+        <Button
             android:id="@+id/placeOrderButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="Place Order" />
+            android:text="Place Order"
+            android:background="@drawable/rounded_black_button"
+            android:textColor="#fff"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            android:fontFamily="sans-serif-medium" />
 
     </LinearLayout>
 </ScrollView> 

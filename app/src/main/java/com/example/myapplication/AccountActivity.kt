@@ -51,6 +51,10 @@ class AccountActivity : AppCompatActivity() {
         binding.helpButton.setOnClickListener {
             Toast.makeText(this, "Help & Support coming soon!", Toast.LENGTH_SHORT).show()
         }
+
+        binding.switchToSellerButton.setOnClickListener {
+            showSwitchToSellerConfirmation()
+        }
     }
 
     private fun loadUserData() {
@@ -70,12 +74,20 @@ class AccountActivity : AppCompatActivity() {
                             else -> "User"
                         }
                         binding.userName.text = fullName
+                        val wasSeller = documentSnapshot.getBoolean("switchedFromSeller") ?: false
+                        if (wasSeller) {
+                            binding.switchToSellerButton.visibility = android.view.View.VISIBLE
+                        } else {
+                            binding.switchToSellerButton.visibility = android.view.View.GONE
+                        }
                     } else {
                         binding.userName.text = "User"
+                        binding.switchToSellerButton.visibility = android.view.View.GONE
                     }
                 }
                 .addOnFailureListener {
                     binding.userName.text = "User"
+                    binding.switchToSellerButton.visibility = android.view.View.GONE
                     Toast.makeText(this, "Error loading user data", Toast.LENGTH_SHORT).show()
                 }
         } else {
@@ -84,5 +96,38 @@ class AccountActivity : AppCompatActivity() {
             startActivity(intent)
             finish()
         }
+    }
+
+    private fun showSwitchToSellerConfirmation() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Switch to Seller Mode")
+            .setMessage("Are you sure you want to switch back to seller mode? You can switch to customer mode anytime from your seller profile.")
+            .setPositiveButton("Switch") { _, _ ->
+                switchToSellerMode()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun switchToSellerMode() {
+        val userId = auth.currentUser?.uid ?: return
+        val userEmail = auth.currentUser?.email ?: return
+        db.collection("sellers").document(userId)
+            .get()
+            .addOnSuccessListener { sellerDoc ->
+                if (sellerDoc != null && sellerDoc.exists()) {
+                    val intent = Intent(this, SellerMainActivity::class.java)
+                    intent.putExtra("accountType", "seller")
+                    intent.putExtra("email", userEmail)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+                } else {
+                    Toast.makeText(this, "Seller account not found", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .addOnFailureListener { e ->
+                Toast.makeText(this, "Failed to switch to seller mode: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
     }
 } 

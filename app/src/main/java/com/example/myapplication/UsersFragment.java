@@ -18,6 +18,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
@@ -267,16 +269,38 @@ public class UsersFragment extends Fragment {
 
     private void deleteAccount(String userId, boolean isSeller) {
         try {
-            String collection = isSeller ? "sellers" : "users";
-            db.collection(collection).document(userId)
-                .delete()
-                .addOnSuccessListener(aVoid -> {
-                    if (getContext() != null) {
-                        Toast.makeText(getContext(), "Account deleted", Toast.LENGTH_SHORT).show();
-                        loadAccounts();
+            // First check if current user is a moderator
+            FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+            if (currentUser == null) {
+                showError(new Exception("You must be logged in to perform this action"));
+                return;
+            }
+
+            // Check moderator status using accountType
+            db.collection("users").document(currentUser.getUid())
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists() && "moderator".equals(documentSnapshot.getString("accountType"))) {
+                        // User is a moderator, proceed with deletion
+                        String collection = isSeller ? "sellers" : "users";
+                        db.collection(collection).document(userId)
+                            .delete()
+                            .addOnSuccessListener(aVoid -> {
+                                if (getContext() != null) {
+                                    Toast.makeText(getContext(), "Account deleted successfully", Toast.LENGTH_SHORT).show();
+                                    loadAccounts();
+                                }
+                            })
+                            .addOnFailureListener(e -> {
+                                showError(new Exception("Failed to delete account: " + e.getMessage()));
+                            });
+                    } else {
+                        showError(new Exception("You don't have permission to delete accounts"));
                     }
                 })
-                .addOnFailureListener(this::showError);
+                .addOnFailureListener(e -> {
+                    showError(new Exception("Failed to verify moderator status: " + e.getMessage()));
+                });
         } catch (Exception e) {
             showError(e);
         }

@@ -222,31 +222,5 @@
                 android:paddingEnd="16dp"
                 android:layout_marginStart="8dp" />
         </LinearLayout>
-
-        <!-- Sign Up Text -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:layout_marginTop="1dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Don't have an account? "
-                android:textColor="#B3FFFFFF"/>
-
-            <TextView
-                android:id="@+id/signUpText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Sign up"
-                android:textColor="#03A9F4"
-                android:textStyle="bold"
-                android:clickable="true"
-                android:focusable="true" />
-
-        </LinearLayout>
     </LinearLayout>
 </ScrollView>

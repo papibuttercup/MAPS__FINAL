@@ -54,7 +54,6 @@ class LoginActivity : AppCompatActivity() {
             startActivity(Intent(this@LoginActivity, CreateSellerAccountActivity::class.java))
         }
         binding.forgotPassword.setOnClickListener { handleForgotPassword() }
-        binding.signUpText.setOnClickListener { handleSignUp() }
     }
 
     private fun validateLoginForm(email: String, password: String): Boolean {
@@ -262,9 +261,5 @@ class LoginActivity : AppCompatActivity() {
 
     private fun handleForgotPassword() {
         startActivity(Intent(this@LoginActivity, ForgotPasswordActivity::class.java))
-    }
-
-    private fun handleSignUp() {
-        startActivity(Intent(this@LoginActivity, SignUpActivity::class.java))
     }
 }
