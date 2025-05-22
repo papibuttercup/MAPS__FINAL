@@ -38,23 +38,33 @@ public class PendingOrdersFragment extends Fragment {
     }
 
     private void loadOrders() {
+        android.util.Log.d("PendingOrdersFragment", "Loading pending orders for seller: " + sellerId);
+        
         db.collection("orders")
             .whereEqualTo("sellerId", sellerId)
+            .whereEqualTo("status", "pending")  // Only get pending orders
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener((value, error) -> {
                 if (error != null) {
+                    android.util.Log.e("PendingOrdersFragment", "Error loading pending orders", error);
                     Toast.makeText(getContext(), "Failed to load orders", Toast.LENGTH_SHORT).show();
                     return;
                 }
+
                 orders.clear();
                 if (value != null) {
+                    android.util.Log.d("PendingOrdersFragment", "Received " + value.size() + " pending orders");
                     for (var doc : value) {
                         Order order = doc.toObject(Order.class);
-                        order.orderId = doc.getId();
-                        if (order.status != null && (order.status.equalsIgnoreCase("pending") || order.status.equalsIgnoreCase("accepted"))) {
+                        if (order != null) {
+                            order.orderId = doc.getId();
                             orders.add(order);
+                            android.util.Log.d("PendingOrdersFragment", "Added order: " + order.orderId + 
+                                ", Status: " + order.status);
                         }
                     }
+                } else {
+                    android.util.Log.d("PendingOrdersFragment", "No pending orders found");
                 }
                 adapter.notifyDataSetChanged();
             });
