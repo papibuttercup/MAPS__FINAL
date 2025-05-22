@@ -670,8 +670,8 @@ public class ProductDetailsActivity extends AppCompatActivity {
         cartItem.put("quantity", 1);
         cartItem.put("timestamp", System.currentTimeMillis());
         
-        db.collection("users").document(userId)
-            .collection("cart")
+        db.collection("carts").document(userId)
+            .collection("items")
             .add(cartItem)
             .addOnSuccessListener(documentReference -> {
                 Toast.makeText(this, "Added to cart", Toast.LENGTH_SHORT).show();
