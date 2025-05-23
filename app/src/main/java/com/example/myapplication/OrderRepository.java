@@ -12,6 +12,7 @@ import com.google.firebase.firestore.FieldValue;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.google.firebase.firestore.Query;
 
 public class OrderRepository {
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
@@ -47,13 +48,26 @@ public class OrderRepository {
             return;
         }
 
+        android.util.Log.d("OrderRepository", "Listening to orders for seller: " + sellerId);
+
         db.collection("orders")
             .whereEqualTo("sellerId", sellerId)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener((snapshots, e) -> {
                 if (e != null) {
+                    android.util.Log.e("OrderRepository", "Error loading seller orders", e);
                     listener.onOrdersReceived(null, e);
                     return;
                 }
+
+                if (snapshots != null) {
+                    android.util.Log.d("OrderRepository", "Received " + snapshots.size() + " orders for seller");
+                    for (var doc : snapshots) {
+                        android.util.Log.d("OrderRepository", "Order ID: " + doc.getId() + 
+                            ", Status: " + doc.getString("status"));
+                    }
+                }
+
                 listener.onOrdersReceived(snapshots, null);
             });
     }
