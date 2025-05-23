@@ -212,16 +212,32 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <ImageButton
-                    android:id="@+id/btnMessageSeller"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="@android:color/transparent"
-                    android:src="@android:drawable/ic_dialog_email"
-                    android:contentDescription="Message Seller"
+                <!-- Top right icons: Cart and Message Seller -->
+                <LinearLayout
+                    android:id="@+id/topRightIcons"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
                     android:layout_alignParentTop="true"
                     android:layout_alignParentEnd="true"
-                    android:layout_margin="8dp" />
+                    android:layout_margin="8dp">
+
+                    <ImageButton
+                        android:id="@+id/btnViewCart"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@android:color/transparent"
+                        android:src="@drawable/ic_cart"
+                        android:contentDescription="View Cart" />
+
+                    <ImageButton
+                        android:id="@+id/btnMessageSeller"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@android:color/transparent"
+                        android:src="@android:drawable/ic_dialog_email"
+                        android:contentDescription="Message Seller" />
+                </LinearLayout>
 
             </RelativeLayout>
         </androidx.cardview.widget.CardView>

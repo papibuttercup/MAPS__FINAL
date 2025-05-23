@@ -34,6 +34,7 @@ public class ProductDetailsActivity extends AppCompatActivity {
     private Button btnBuyNow;
     private Button btnAddToCart;
     private ImageButton btnMessageSeller;
+    private ImageButton btnViewCart;
     private Product product;
     private List<String> imageUrls = new ArrayList<>();
     private TextView txtImageCount;
@@ -69,6 +70,7 @@ public class ProductDetailsActivity extends AppCompatActivity {
         txtSelectedColor = findViewById(R.id.txtSelectedColor);
         layoutDetailSizes = findViewById(R.id.layoutDetailSizes);
         txtSelectedSize = findViewById(R.id.txtSelectedSize);
+        btnViewCart = findViewById(R.id.btnViewCart);
 
         db = FirebaseFirestore.getInstance();
 
@@ -123,7 +125,7 @@ public class ProductDetailsActivity extends AppCompatActivity {
                     if (doc.contains("stockEntries")) {
                         List<?> stockEntryList = (List<?>) doc.get("stockEntries");
                         stockEntries.clear();
-                        Set<String> uniqueColorsWithStock = new HashSet<>();
+                        Set<String> uniqueColors = new HashSet<>();
                         for (Object obj : stockEntryList) {
                             if (obj instanceof java.util.Map) {
                                 java.util.Map map = (java.util.Map) obj;
@@ -131,14 +133,18 @@ public class ProductDetailsActivity extends AppCompatActivity {
                                 String size = map.get("size") != null ? map.get("size").toString() : "";
                                 int entryStock = map.get("stock") != null ? Integer.parseInt(map.get("stock").toString()) : 0;
                                 stockEntries.add(new StockEntry(color, size, entryStock));
-                                if (!color.isEmpty() && entryStock > 0) {
-                                    uniqueColorsWithStock.add(color.trim());
+                                if (!color.isEmpty()) {
+                                    uniqueColors.add(color.trim());
                                 }
                             }
                         }
                         availableColors.clear();
-                        availableColors.addAll(uniqueColorsWithStock);
-                        showProductColors(availableColors); // Use unique colors from stock entries with stock
+                        if (product.colors != null && !product.colors.isEmpty()) {
+                            availableColors.addAll(product.colors);
+                        } else {
+                            availableColors.addAll(uniqueColors);
+                        }
+                        showProductColors(availableColors); // Show all colors
                     } else {
                         // If no stock entries, show no colors available
                         stockEntries.clear();
@@ -302,6 +308,11 @@ public class ProductDetailsActivity extends AppCompatActivity {
             } else {
                 Toast.makeText(this, "Seller information not available", Toast.LENGTH_SHORT).show();
             }
+        });
+
+        btnViewCart.setOnClickListener(v -> {
+            Intent intent = new Intent(ProductDetailsActivity.this, CartActivity.class);
+            startActivity(intent);
         });
 
         // Setup color and size selection
@@ -472,7 +483,8 @@ public class ProductDetailsActivity extends AppCompatActivity {
             case "black": return ContextCompat.getColor(this, R.color.product_black);
             case "white": return ContextCompat.getColor(this, R.color.product_white);
             case "yellow": return ContextCompat.getColor(this, R.color.product_yellow);
-            case "purple": return ContextCompat.getColor(this, R.color.product_purple);
+            case "purple":
+            case "violet": return ContextCompat.getColor(this, R.color.product_purple);
             case "pink": return ContextCompat.getColor(this, R.color.product_pink);
             case "orange": return ContextCompat.getColor(this, R.color.product_orange);
             case "gray": return ContextCompat.getColor(this, R.color.product_gray);
@@ -662,23 +674,52 @@ public class ProductDetailsActivity extends AppCompatActivity {
     }
 
     private void addToCart(String productId, String color, String size) {
+        if (product == null || product.sellerId == null || product.sellerId.isEmpty()) {
+            Toast.makeText(this, "Seller information missing. Please try again.", Toast.LENGTH_SHORT).show();
+            return;
+        }
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        Map<String, Object> cartItem = new HashMap<>();
-        cartItem.put("productId", productId);
-        cartItem.put("color", color);
-        cartItem.put("size", size);
-        cartItem.put("quantity", 1);
-        cartItem.put("timestamp", System.currentTimeMillis());
-        
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
         db.collection("carts").document(userId)
             .collection("items")
-            .add(cartItem)
-            .addOnSuccessListener(documentReference -> {
-                Toast.makeText(this, "Added to cart", Toast.LENGTH_SHORT).show();
+            .whereEqualTo("productId", productId)
+            .whereEqualTo("color", color)
+            .whereEqualTo("size", size)
+            .get()
+            .addOnSuccessListener(query -> {
+                if (!query.isEmpty()) {
+                    // Item exists, update quantity
+                    for (com.google.firebase.firestore.QueryDocumentSnapshot doc : query) {
+                        Long currentQty = doc.getLong("quantity");
+                        int newQty = (currentQty != null ? currentQty.intValue() : 1) + 1;
+                        doc.getReference().update("quantity", newQty);
+                    }
+                    Toast.makeText(this, "Added to cart", Toast.LENGTH_SHORT).show();
+                } else {
+                    // Add new item
+                    Map<String, Object> cartItem = new HashMap<>();
+                    cartItem.put("productId", productId);
+                    cartItem.put("sellerId", product.sellerId);
+                    cartItem.put("name", product.name != null ? product.name : "");
+                    cartItem.put("imageUrl", product.coverPhotoUri != null ? product.coverPhotoUri : "");
+                    cartItem.put("color", color);
+                    cartItem.put("size", size);
+                    cartItem.put("price", product.price);
+                    cartItem.put("quantity", 1);
+                    cartItem.put("timestamp", System.currentTimeMillis());
+                    db.collection("carts").document(userId)
+                        .collection("items")
+                        .add(cartItem)
+                        .addOnSuccessListener(documentReference -> {
+                            Toast.makeText(this, "Added to cart", Toast.LENGTH_SHORT).show();
+                        })
+                        .addOnFailureListener(e -> {
+                            Toast.makeText(this, "Failed to add to cart: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        });
+                }
             })
             .addOnFailureListener(e -> {
-                Toast.makeText(this, "Failed to add to cart: " + e.getMessage(), 
-                    Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Failed to add to cart: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             });
     }
 }

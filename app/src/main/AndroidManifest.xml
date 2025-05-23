@@ -158,5 +158,7 @@
             android:exported="false"
             android:label="My Orders"
             android:parentActivityName=".LandingActivity" />
+
+        <activity android:name=".CartActivity" />
     </application>
 </manifest>
