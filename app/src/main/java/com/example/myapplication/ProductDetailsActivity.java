@@ -30,9 +30,8 @@ import androidx.core.content.ContextCompat;
 public class ProductDetailsActivity extends AppCompatActivity {
     private ViewPager2 viewPagerImages;
     private ImageView imgProduct;
-    private TextView txtProductName, txtProductPrice, txtGuarantee, txtRating, txtSold, txtSellerName;
-    private Button btnBuyNow;
-    private Button btnAddToCart;
+    private TextView txtProductName, txtProductPrice, txtSellerName;
+    private Button btnAddToCart, btnBuyNow;
     private ImageButton btnMessageSeller;
     private ImageButton btnViewCart;
     private Product product;
@@ -58,19 +57,19 @@ public class ProductDetailsActivity extends AppCompatActivity {
         imgProduct = findViewById(R.id.imgProduct);
         txtProductName = findViewById(R.id.txtProductName);
         txtProductPrice = findViewById(R.id.txtProductPrice);
-        btnBuyNow = findViewById(R.id.btnBuyNow);
-        btnAddToCart = findViewById(R.id.btnAddToCart);
         btnMessageSeller = findViewById(R.id.btnMessageSeller);
         txtImageCount = findViewById(R.id.txtImageCount);
-        txtGuarantee = findViewById(R.id.txtGuarantee);
-        txtRating = findViewById(R.id.txtRating);
-        txtSold = findViewById(R.id.txtSold);
         txtSellerName = findViewById(R.id.txtSellerName);
         layoutDetailColors = findViewById(R.id.layoutDetailColors);
         txtSelectedColor = findViewById(R.id.txtSelectedColor);
         layoutDetailSizes = findViewById(R.id.layoutDetailSizes);
         txtSelectedSize = findViewById(R.id.txtSelectedSize);
         btnViewCart = findViewById(R.id.btnViewCart);
+
+        findViewById(R.id.btnBack).setOnClickListener(v -> finish());
+        findViewById(R.id.btnSearch).setOnClickListener(v -> Toast.makeText(this, "Search clicked", Toast.LENGTH_SHORT).show());
+        findViewById(R.id.btnShare).setOnClickListener(v -> Toast.makeText(this, "Share clicked", Toast.LENGTH_SHORT).show());
+        findViewById(R.id.btnFavorite).setOnClickListener(v -> Toast.makeText(this, "Added to favorites", Toast.LENGTH_SHORT).show());
 
         db = FirebaseFirestore.getInstance();
 
@@ -115,12 +114,7 @@ public class ProductDetailsActivity extends AppCompatActivity {
                         txtImageCount.setVisibility(View.GONE);
                     }
                     // Guarantee/info
-                    txtGuarantee.setText("Thrifty Guarantees 100% Orig");
                     // Rating and sold count (placeholder logic)
-                    double rating = 5.0;
-                    int soldCount = 300;
-                    txtRating.setText("★ " + rating);
-                    txtSold.setText(soldCount + " Sold");
                     // Load stockEntries if available and populate colors from there
                     if (doc.contains("stockEntries")) {
                         List<?> stockEntryList = (List<?>) doc.get("stockEntries");
@@ -193,95 +187,6 @@ public class ProductDetailsActivity extends AppCompatActivity {
                 finish();
             });
 
-        btnBuyNow.setOnClickListener(v -> {
-            if (selectedColorIndex == -1 || selectedSizeIndex == -1) {
-                Toast.makeText(this, "Please select both color and size", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            
-            // Get selected color and size
-            String selectedColor = null;
-            String selectedSize = null;
-
-            if (selectedColorIndex >= 0 && selectedColorIndex < availableColors.size()) {
-                selectedColor = availableColors.get(selectedColorIndex);
-            } else {
-                Toast.makeText(this, "Error getting selected color. Please re-select.", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            if (selectedSizeIndex >= 0 && selectedSizeIndex < availableSizes.size()) {
-                selectedSize = availableSizes.get(selectedSizeIndex);
-            } else {
-                Toast.makeText(this, "Error getting selected size. Please re-select.", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            
-            // Find matching stock entry
-            StockEntry selectedEntry = null;
-            for (StockEntry entry : stockEntries) {
-                if (entry.color.equals(selectedColor) && entry.size.equals(selectedSize)) {
-                    selectedEntry = entry;
-                    break;
-                }
-            }
-            
-            if (selectedEntry != null && selectedEntry.stock > 0) {
-                // Start BuyNowActivity with selected options
-                Intent intent = new Intent(this, BuyNowActivity.class);
-                intent.putExtra("productId", product.id);
-                intent.putExtra("sellerId", product.sellerId);
-                intent.putExtra("productName", product.name);
-                intent.putExtra("productPrice", product.price);
-                intent.putExtra("selectedColor", selectedColor);
-                intent.putExtra("selectedSize", selectedSize);
-                intent.putExtra("availableStock", selectedEntry.stock);
-                startActivity(intent);
-            } else {
-                Toast.makeText(this, "Selected combination is out of stock", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        btnAddToCart.setOnClickListener(v -> {
-            if (selectedColorIndex == -1 || selectedSizeIndex == -1) {
-                Toast.makeText(this, "Please select both color and size", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            
-            // Get selected color and size
-            String selectedColor = null;
-            String selectedSize = null;
-
-            if (selectedColorIndex >= 0 && selectedColorIndex < availableColors.size()) {
-                selectedColor = availableColors.get(selectedColorIndex);
-            } else {
-                Toast.makeText(this, "Error getting selected color. Please re-select.", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            if (selectedSizeIndex >= 0 && selectedSizeIndex < availableSizes.size()) {
-                selectedSize = availableSizes.get(selectedSizeIndex);
-            } else {
-                Toast.makeText(this, "Error getting selected size. Please re-select.", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            
-            // Find matching stock entry
-            StockEntry selectedEntry = null;
-            for (StockEntry entry : stockEntries) {
-                if (entry.color.equals(selectedColor) && entry.size.equals(selectedSize)) {
-                    selectedEntry = entry;
-                    break;
-                }
-            }
-            
-            if (selectedEntry != null && selectedEntry.stock > 0) {
-                // Add to cart logic here
-                addToCart(product.id, selectedColor, selectedSize);
-            } else {
-                Toast.makeText(this, "Selected combination is out of stock", Toast.LENGTH_SHORT).show();
-            }
-        });
 
         btnMessageSeller.setOnClickListener(v -> {
             if (product != null && product.sellerId != null) {
@@ -315,10 +220,11 @@ public class ProductDetailsActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
+        setupBuyButtons();
+
         // Setup color and size selection
         setupColorSelection();
         setupSizeSelection();
-        setupBuyButtons();
     }
 
     private void showProductColors(List<String> colors) {
@@ -327,74 +233,48 @@ public class ProductDetailsActivity extends AppCompatActivity {
         
         if (colors == null || colors.isEmpty()) {
             txtSelectedColor.setText("Color: -");
-            View dot = new View(this);
-            int size = (int) (28 * getResources().getDisplayMetrics().density);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
-            params.setMargins(16, 0, 16, 0);
-            dot.setLayoutParams(params);
-            dot.setBackgroundResource(R.drawable.bg_color_dot);
-            GradientDrawable bg = (GradientDrawable) dot.getBackground();
-            bg.setColor(Color.LTGRAY);
-            bg.setStroke(1, Color.parseColor("#888888"));
-            layoutDetailColors.addView(dot);
-            return;
-        }
-
-        if (availableColors.isEmpty()) {
-            txtSelectedColor.setText("Color: Out of Stock");
-            View dot = new View(this);
-            int size = (int) (28 * getResources().getDisplayMetrics().density);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
-            params.setMargins(16, 0, 16, 0);
-            dot.setLayoutParams(params);
-            dot.setBackgroundResource(R.drawable.bg_color_dot);
-            GradientDrawable bg = (GradientDrawable) dot.getBackground();
-            bg.setColor(Color.LTGRAY);
-            bg.setStroke(1, Color.parseColor("#888888"));
-            layoutDetailColors.addView(dot);
             return;
         }
 
         // Set initial selected color if none selected
-        if (selectedColorIndex == -1 || selectedColorIndex >= availableColors.size()) {
+        if (selectedColorIndex == -1 || selectedColorIndex >= colors.size()) {
             selectedColorIndex = 0;
         }
-        updateSelectedColorLabel(availableColors.get(selectedColorIndex));
+        updateSelectedColorLabel(colors.get(selectedColorIndex));
 
         // Create color dots
-        for (int i = 0; i < availableColors.size(); i++) {
-            String colorName = availableColors.get(i);
+        for (int i = 0; i < colors.size(); i++) {
+            String colorName = colors.get(i);
             View dot = new View(this);
-            int size = (int) (28 * getResources().getDisplayMetrics().density);
+            int size = (int) (32 * getResources().getDisplayMetrics().density);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
-            params.setMargins(16, 0, 16, 0);
+            params.setMargins(0, 0, 16, 0);
             dot.setLayoutParams(params);
             dot.setBackgroundResource(R.drawable.bg_color_dot);
             GradientDrawable bg = (GradientDrawable) dot.getBackground();
             bg.setColor(getColorFromName(colorName));
             
-            // Set selection state
+            // Set selection state (thicker stroke for selection)
             if (i == selectedColorIndex) {
-                bg.setStroke(4, Color.parseColor("#8B2CF5")); // Selected state
+                bg.setStroke(4, Color.BLACK); 
             } else {
-                bg.setStroke(1, Color.parseColor("#888888")); // Unselected state
+                bg.setStroke(1, Color.LTGRAY);
             }
 
             final int index = i;
             dot.setOnClickListener(v -> {
                 selectedColorIndex = index;
                 String selectedColor = colors.get(selectedColorIndex);
-                Log.d("ColorSelectionDebug", "Color dot clicked. Selected color: " + selectedColor);
                 updateSelectedColorLabel(selectedColor);
                 updateAvailableSizesForColor(selectedColor);
-                showProductColors(colors); // Refresh to update selection with the same list
+                showProductColors(colors); 
             });
 
             layoutDetailColors.addView(dot);
         }
 
         // Update sizes for selected color
-        if (product != null && product.sizes != null && !colors.isEmpty()) {
+        if (product != null && !colors.isEmpty()) {
             updateAvailableSizesForColor(colors.get(selectedColorIndex));
         }
     }
@@ -436,13 +316,20 @@ public class ProductDetailsActivity extends AppCompatActivity {
             String sizeName = sizes.get(i);
             TextView sizeView = new TextView(this);
             sizeView.setText(sizeName);
-            sizeView.setTextSize(15);
-            sizeView.setPadding(32, 8, 32, 8);
-            sizeView.setBackgroundResource(R.drawable.bg_size_selector);
+            sizeView.setTextSize(13);
+            sizeView.setPadding(48, 16, 48, 16);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            params.setMargins(0, 0, 12, 0);
+            sizeView.setLayoutParams(params);
+            sizeView.setGravity(android.view.Gravity.CENTER);
+            
             if (i == selectedSizeIndex) {
-                sizeView.setTextColor(Color.parseColor("#8B2CF5"));
+                sizeView.setBackgroundResource(R.drawable.bg_size_item_selected_v2);
+                sizeView.setTextColor(Color.WHITE);
             } else {
-                sizeView.setTextColor(Color.parseColor("#444444"));
+                sizeView.setBackgroundResource(R.drawable.bg_size_item_v2);
+                sizeView.setTextColor(Color.BLACK);
             }
             final int index = i;
             sizeView.setOnClickListener(v -> {
@@ -671,6 +558,7 @@ public class ProductDetailsActivity extends AppCompatActivity {
                 Toast.makeText(this, "Selected combination is out of stock", Toast.LENGTH_SHORT).show();
             }
         });
+        
     }
 
     private void addToCart(String productId, String color, String size) {

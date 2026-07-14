@@ -5,7 +5,8 @@
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
     app:cardCornerRadius="12dp"
-    app:cardElevation="4dp">
+    app:cardElevation="4dp"
+    app:cardBackgroundColor="@color/background">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -30,6 +31,7 @@
                 android:textSize="18sp"
                 android:maxLines="1"
                 android:ellipsize="end"
+                android:textColor="@color/textPrimary"
                 android:layout_marginBottom="4dp" />
 
             <!-- Shop Location (now used for shop name) -->
@@ -39,7 +41,7 @@
                 android:layout_height="wrap_content"
                 android:text="Magsaysay Ave"
                 android:textSize="14sp"
-                android:textColor="@android:color/darker_gray"
+                android:textColor="@color/textSecondary"
                 android:layout_marginBottom="8dp" />
 
             <!-- Buttons -->
@@ -54,6 +56,8 @@
                     android:layout_height="wrap_content"
                     android:text="Visit Shop"
                     android:textAllCaps="false"
+                    android:textColor="@color/primaryColor"
+                    android:strokeColor="@color/primaryColor"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_marginEnd="8dp" />
 
@@ -63,6 +67,8 @@
                     android:layout_height="wrap_content"
                     android:text="View on Map"
                     android:textAllCaps="false"
+                    android:textColor="@color/primaryColor"
+                    android:strokeColor="@color/primaryColor"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
             </LinearLayout>
         </LinearLayout>

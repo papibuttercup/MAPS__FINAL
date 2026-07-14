@@ -5,15 +5,6 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/tvOrdersTitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Orders"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:padding="16dp"/>
-
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tabLayout"
         android:layout_width="match_parent"
@@ -27,4 +18,4 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"/>
-</LinearLayout> 
+</LinearLayout>

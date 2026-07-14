@@ -52,6 +52,14 @@
                 android:layout_marginStart="16dp"
                 android:src="@drawable/ic_message"
                 android:contentDescription="Messages" />
+
+            <ImageView
+                android:id="@+id/cart_icon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="16dp"
+                android:src="@drawable/ic_bag_v2"
+                android:contentDescription="Shopping Cart" />
         </LinearLayout>
 
         <!-- Home Content Section -->
@@ -63,13 +71,13 @@
             android:paddingBottom="16dp">
 
             <!-- Thrift Shops Section -->
-            <TextView
+                <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Thrift Shops in Baguio"
                 android:textStyle="bold"
                 android:textSize="20sp"
-                android:textColor="@color/black"
+                android:textColor="@color/textPrimary"
                 android:layout_marginTop="24dp"
                 android:layout_marginStart="16dp" />
 

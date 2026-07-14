@@ -1,22 +1,26 @@
 package com.example.myapplication;
 
 import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 
-public class SellerOrdersActivity extends AppCompatActivity {
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_seller_orders);
+public class SellerOrdersFragment extends Fragment {
 
-        TabLayout tabLayout = findViewById(R.id.tabLayout);
-        ViewPager2 viewPager = findViewById(R.id.viewPager);
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.fragment_seller_orders, container, false);
+
+        TabLayout tabLayout = view.findViewById(R.id.tabLayout);
+        ViewPager2 viewPager = view.findViewById(R.id.viewPager);
         viewPager.setAdapter(new SellerOrdersPagerAdapter(this));
 
         new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
@@ -25,11 +29,13 @@ public class SellerOrdersActivity extends AppCompatActivity {
             else if (position == 2) tab.setText("Finished");
             else tab.setText("Canceled");
         }).attach();
+
+        return view;
     }
 
     private static class SellerOrdersPagerAdapter extends FragmentStateAdapter {
-        public SellerOrdersPagerAdapter(@NonNull AppCompatActivity activity) {
-            super(activity);
+        public SellerOrdersPagerAdapter(@NonNull Fragment fragment) {
+            super(fragment);
         }
         @NonNull
         @Override
@@ -42,4 +48,4 @@ public class SellerOrdersActivity extends AppCompatActivity {
         @Override
         public int getItemCount() { return 4; }
     }
-} 
+}

@@ -1,52 +1,170 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/background"
-    android:clickable="true"
-    android:focusable="true">
+    android:background="@color/white">
 
     <!-- Header -->
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
         android:paddingHorizontal="16dp"
-        android:background="#FFF">
-        <ImageView
-            android:id="@+id/backButton"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_back"
-            android:contentDescription="Back" />
+        android:background="@color/white">
+
+        <ImageButton
+            android:id="@+id/btnSearchHeader"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_menu_search"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:tint="@color/black" />
+
         <TextView
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:text="CATEGORIES"
             android:textStyle="bold"
             android:textSize="18sp"
-            android:gravity="center"
-            android:textColor="#222"
-            android:focusable="false"
-            android:focusableInTouchMode="false"
-            android:clickable="false"
-            android:cursorVisible="false"
-            android:longClickable="false" />
-    </LinearLayout>
+            android:textColor="@color/black"
+            android:letterSpacing="0.05"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
-    <!-- Category List -->
-    <ScrollView
+        <ImageButton
+            android:id="@+id/btnCartHeader"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_bag_v2"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:tint="@color/black" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Category Banners -->
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_height="match_parent">
+
         <LinearLayout
-            android:id="@+id/categoryList"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp" />
-    </ScrollView>
-</LinearLayout> 
+            android:padding="12dp">
+
+            <!-- Woman -->
+            <FrameLayout
+                android:id="@+id/bannerWoman"
+                android:layout_width="match_parent"
+                android:layout_height="160dp"
+                android:layout_marginBottom="12dp">
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/ic_image_placeholder"
+                    android:background="#F0F0F0" />
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#22000000" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="Woman"
+                    android:textColor="@color/white"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+            </FrameLayout>
+
+            <!-- Men -->
+            <FrameLayout
+                android:id="@+id/bannerMen"
+                android:layout_width="match_parent"
+                android:layout_height="160dp"
+                android:layout_marginBottom="12dp">
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/ic_image_placeholder"
+                    android:background="#E0E0E0" />
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#22000000" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="Men"
+                    android:textColor="@color/white"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+            </FrameLayout>
+
+            <!-- Kids -->
+            <FrameLayout
+                android:id="@+id/bannerKids"
+                android:layout_width="match_parent"
+                android:layout_height="160dp"
+                android:layout_marginBottom="12dp">
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/ic_image_placeholder"
+                    android:background="#D0D0D0" />
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#22000000" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="Kids"
+                    android:textColor="@color/white"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+            </FrameLayout>
+
+            <!-- Home -->
+            <FrameLayout
+                android:id="@+id/bannerHome"
+                android:layout_width="match_parent"
+                android:layout_height="160dp">
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/ic_image_placeholder"
+                    android:background="#C0C0C0" />
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#22000000" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="Home"
+                    android:textColor="@color/white"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+            </FrameLayout>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</LinearLayout>

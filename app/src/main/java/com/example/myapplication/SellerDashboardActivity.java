@@ -39,7 +39,7 @@ public class SellerDashboardActivity extends AppCompatActivity {
             startActivity(new Intent(this, ListNewItemActivity.class));
         });
         cardOrders.setOnClickListener(v -> {
-            startActivity(new Intent(this, SellerOrdersActivity.class));
+            startActivity(new Intent(this, SellerMainActivity.class));
         });
         btnSellerChats.setOnClickListener(v -> {
             Intent intent = new Intent(this, SellerChatListActivity.class);
@@ -55,7 +55,7 @@ public class SellerDashboardActivity extends AppCompatActivity {
                 startActivity(new Intent(this, SellerMainActivity.class));
                 return true;
             } else if (itemId == R.id.nav_orders) {
-                startActivity(new Intent(this, SellerOrdersActivity.class));
+                startActivity(new Intent(this, SellerMainActivity.class));
                 return true;
             } else if (itemId == R.id.nav_account) {
                 startActivity(new Intent(this, SellerAccountActivity.class));

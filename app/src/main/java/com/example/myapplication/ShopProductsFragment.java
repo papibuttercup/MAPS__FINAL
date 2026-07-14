@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -23,6 +24,10 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.List;
 import com.google.firebase.firestore.ListenerRegistration;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.graphics.Color;
+import com.google.android.material.tabs.TabLayout;
 
 public class ShopProductsFragment extends Fragment implements CategoryAdapter.OnCategoryClickListener {
     private static final String ARG_SELLER_ID = "sellerId";
@@ -42,8 +47,16 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
     private String selectedCategory = null;
     private TextView shopTitle;
     private Spinner mainCategorySpinner;
-    private ImageButton btnMessageShop;
+    private Button btnMessageShop;
     private ListenerRegistration productListenerRegistration;
+    private EditText etSearchInShop;
+    private TextView txtShopRating, txtFollowersCount;
+    private ImageView imgShopLogo;
+    private View layoutProductsView, layoutCategoriesView;
+    private TabLayout shopTabLayout;
+    private TextView btnSortPopular, btnSortLatest, btnSortPrice;
+    private String currentSearchQuery = "";
+    private String currentSortOrder = "latest"; // "popular", "latest", "price_asc", "price_desc"
 
     public static ShopProductsFragment newInstance(String sellerId, String shopName) {
         ShopProductsFragment fragment = new ShopProductsFragment();
@@ -63,9 +76,18 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
             shopName = getArguments().getString(ARG_SHOP_NAME);
         }
         db = FirebaseFirestore.getInstance();
+
+        // Initialize Header & Shop Info
+        view.findViewById(R.id.btnBack).setOnClickListener(v -> requireActivity().onBackPressed());
+        etSearchInShop = view.findViewById(R.id.etSearchInShop);
         shopTitle = view.findViewById(R.id.shopTitle);
         shopTitle.setText(shopName);
+        txtShopRating = view.findViewById(R.id.txtShopRating);
+        txtFollowersCount = view.findViewById(R.id.txtFollowersCount);
+        imgShopLogo = view.findViewById(R.id.imgShopLogo);
         btnMessageShop = view.findViewById(R.id.btnMessageShop);
+
+        // Action Buttons
         btnMessageShop.setOnClickListener(v -> {
             String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
             if (currentUserId != null && sellerId != null && !currentUserId.equals(sellerId)) {
@@ -74,17 +96,76 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
                 startActivity(intent);
             } else if (currentUserId != null && currentUserId.equals(sellerId)) {
                 Toast.makeText(getContext(), "You cannot message your own shop.", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(getContext(), "Unable to start chat.", Toast.LENGTH_SHORT).show();
             }
         });
+
+        view.findViewById(R.id.btnFollowShop).setOnClickListener(v -> 
+            Toast.makeText(getContext(), "Following " + shopName, Toast.LENGTH_SHORT).show()
+        );
+
+        // Tabs
+        shopTabLayout = view.findViewById(R.id.shopTabLayout);
+        layoutProductsView = view.findViewById(R.id.layoutProductsView);
+        layoutCategoriesView = view.findViewById(R.id.layoutCategoriesView);
+
+        shopTabLayout.addOnTabSelectedListener(new com.google.android.material.tabs.TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(com.google.android.material.tabs.TabLayout.Tab tab) {
+                if (tab.getPosition() == 0) {
+                    layoutProductsView.setVisibility(View.VISIBLE);
+                    layoutCategoriesView.setVisibility(View.GONE);
+                } else {
+                    layoutProductsView.setVisibility(View.GONE);
+                    layoutCategoriesView.setVisibility(View.VISIBLE);
+                }
+            }
+            @Override
+            public void onTabUnselected(com.google.android.material.tabs.TabLayout.Tab tab) {}
+            @Override
+            public void onTabReselected(com.google.android.material.tabs.TabLayout.Tab tab) {}
+        });
+
+        // Search logic
+        etSearchInShop.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                currentSearchQuery = s.toString().toLowerCase().trim();
+                applyFiltersAndSort();
+            }
+            @Override
+            public void afterTextChanged(android.text.Editable s) {}
+        });
+
+        // Sorting buttons
+        btnSortPopular = view.findViewById(R.id.btnSortPopular);
+        btnSortLatest = view.findViewById(R.id.btnSortLatest);
+        btnSortPrice = view.findViewById(R.id.btnSortPrice);
+
+        btnSortPopular.setOnClickListener(v -> updateSort("popular"));
+        btnSortLatest.setOnClickListener(v -> updateSort("latest"));
+        btnSortPrice.setOnClickListener(v -> {
+            if (currentSortOrder.equals("price_asc")) updateSort("price_desc");
+            else updateSort("price_asc");
+        });
+
+        // Product RecyclerView
+        productRecyclerView = view.findViewById(R.id.productRecyclerView);
+        productRecyclerView.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(getContext(), 2));
+        productAdapter = new ProductListAdapter(getContext(), products, false);
+        productAdapter.setOnProductClickListener(product -> {
+            Intent intent = new Intent(getActivity(), ProductDetailsActivity.class);
+            intent.putExtra("productId", product.id);
+            startActivity(intent);
+        });
+        productRecyclerView.setAdapter(productAdapter);
+
+        // Category UI
         mainCategorySpinner = view.findViewById(R.id.mainCategorySpinner);
         subcategoryRecyclerView = view.findViewById(R.id.subcategoryRecyclerView);
-        productRecyclerView = view.findViewById(R.id.productRecyclerView);
         subcategoryRecyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
-        productRecyclerView.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(getContext(), 2));
 
-        // Setup main categories
         setupMainCategories();
         ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, mainCategories);
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -98,27 +179,102 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
             public void onNothingSelected(AdapterView<?> parent) {}
         });
 
-        // Setup subcategory adapter (empty initially)
         subcategoryAdapter = new CategoryAdapter(subCategories, subCategoryIcons, subcategory -> {
             selectSubCategory(subcategory);
         });
         subcategoryRecyclerView.setAdapter(subcategoryAdapter);
 
-        // Load default (first) main category's subcategories
-        if (!mainCategories.isEmpty()) {
-            loadSubCategories(mainCategories.get(0));
+        loadSellerDetails();
+        loadAllProductsForSeller();
+        
+        return view;
+    }
+
+    private void loadSellerDetails() {
+        if (sellerId == null) return;
+        db.collection("sellers").document(sellerId).get()
+            .addOnSuccessListener(doc -> {
+                if (doc.exists()) {
+                    String logoUrl = doc.getString("coverPhotoUrl");
+                    if (logoUrl != null && !logoUrl.isEmpty()) {
+                        com.bumptech.glide.Glide.with(this).load(logoUrl).into(imgShopLogo);
+                    }
+                    Double avgRating = doc.getDouble("averageRating");
+                    if (avgRating != null) {
+                        txtShopRating.setText(String.format("%.1f", avgRating));
+                    }
+                }
+            });
+    }
+
+    private void updateSort(String order) {
+        currentSortOrder = order;
+        // Update UI colors
+        btnSortPopular.setTextColor(order.equals("popular") ? Color.parseColor("#FF4500") : Color.BLACK);
+        btnSortLatest.setTextColor(order.equals("latest") ? Color.parseColor("#FF4500") : Color.BLACK);
+        btnSortPrice.setTextColor(order.startsWith("price") ? Color.parseColor("#FF4500") : Color.BLACK);
+        
+        if (order.equals("price_asc")) btnSortPrice.setText("Price ↑");
+        else if (order.equals("price_desc")) btnSortPrice.setText("Price ↓");
+        else btnSortPrice.setText("Price ⇅");
+
+        applyFiltersAndSort();
+    }
+
+    private List<Product> allProducts = new ArrayList<>();
+
+    private void applyFiltersAndSort() {
+        List<Product> filtered = new ArrayList<>();
+        for (Product p : allProducts) {
+            boolean matchesSearch = currentSearchQuery.isEmpty() || 
+                                   (p.name != null && p.name.toLowerCase().contains(currentSearchQuery));
+            if (matchesSearch) {
+                filtered.add(p);
+            }
         }
 
-        // Initialize product adapter with click listener
-        productAdapter = new ProductListAdapter(getContext(), products, false);
-        productAdapter.setOnProductClickListener(product -> {
-            Intent intent = new Intent(getActivity(), ProductDetailsActivity.class);
-            intent.putExtra("productId", product.id);
-            startActivity(intent);
+        // Sort
+        java.util.Collections.sort(filtered, (p1, p2) -> {
+            switch (currentSortOrder) {
+                case "price_asc": return Double.compare(p1.price, p2.price);
+                case "price_desc": return Double.compare(p2.price, p1.price);
+                case "latest": return Long.compare(p2.createdAt, p1.createdAt);
+                default: return 0;
+            }
         });
-        productRecyclerView.setAdapter(productAdapter);
-        loadAllProductsForSeller();
-        return view;
+
+        products.clear();
+        products.addAll(filtered);
+        productAdapter.notifyDataSetChanged();
+    }
+
+    private void loadAllProductsForSeller() {
+        if (sellerId == null) return;
+
+        if (productListenerRegistration != null) {
+            productListenerRegistration.remove();
+        }
+
+        productListenerRegistration = db.collection("products")
+            .whereEqualTo("sellerId", sellerId)
+            .addSnapshotListener((queryDocumentSnapshots, error) -> {
+                if (error != null) {
+                    Toast.makeText(getContext(), "Error loading products: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                allProducts.clear();
+                if (queryDocumentSnapshots != null) {
+                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                        Product product = doc.toObject(Product.class);
+                        if (product != null) {
+                            product.id = doc.getId();
+                            allProducts.add(product);
+                        }
+                    }
+                }
+                applyFiltersAndSort();
+            });
     }
 
     private void setupMainCategories() {
@@ -257,35 +413,7 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
             });
     }
 
-    private void loadAllProductsForSeller() {
-        if (sellerId == null) return;
 
-        // Stop previous listener if it exists
-        if (productListenerRegistration != null) {
-            productListenerRegistration.remove();
-        }
-
-        productListenerRegistration = db.collection("products")
-            .whereEqualTo("sellerId", sellerId)
-            .addSnapshotListener((queryDocumentSnapshots, error) -> {
-                if (error != null) {
-                    Toast.makeText(getContext(), "Error loading products: " + error.getMessage(), Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                products.clear();
-                if (queryDocumentSnapshots != null) {
-                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                        Product product = doc.toObject(Product.class);
-                        if (product != null) {
-                            product.id = doc.getId();
-                            products.add(product);
-                        }
-                    }
-                }
-                productAdapter.notifyDataSetChanged();
-            });
-    }
 
     @Override
     public void onCategoryClick(String category) {

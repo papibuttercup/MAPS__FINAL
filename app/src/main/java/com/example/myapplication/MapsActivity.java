@@ -35,11 +35,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         // Initialize bottom navigation
         bottomNavigationView = findViewById(R.id.bottomNavigation);
-        bottomNavigationView.setSelectedItemId(R.id.navigation_for_you);
+        bottomNavigationView.setSelectedItemId(R.id.navigation_favorites);
         bottomNavigationView.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
-            if (itemId == R.id.navigation_for_you) {
-                // Already on For You tab
+            if (itemId == R.id.navigation_favorites) {
+                // Already on Favorites tab
                 return true;
             } else if (itemId == R.id.navigation_home) {
                 finish(); // or navigate to home/main screen

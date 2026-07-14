@@ -37,20 +37,46 @@ class AccountActivity : AppCompatActivity() {
             finish()
         }
 
-        // Remove or comment out references to editProfileButton since the button was removed from the layout
-        // binding.editProfileButton.setOnClickListener {
-        //     val intent = Intent(this, EditProfileActivity::class.java)
-        //     startActivity(intent)
-        // }
+        binding.editProfileButton.setOnClickListener {
+             val intent = Intent(this, EditProfileActivity::class.java)
+             startActivity(intent)
+        }
 
-        binding.settingsButton.setOnClickListener {
-            val intent = Intent(this, SettingsActivity::class.java)
+        binding.viewOrderHistory.setOnClickListener {
+            // Navigate to orders (which is in LandingActivity)
+            val intent = Intent(this, LandingActivity::class.java)
+            intent.putExtra("navigateTo", "orders")
+            startActivity(intent)
+            finish()
+        }
+
+        val comingSoonListener = android.view.View.OnClickListener {
+            Toast.makeText(this, "Coming soon!", Toast.LENGTH_SHORT).show()
+        }
+
+        binding.statusUnpaid.setOnClickListener(comingSoonListener)
+        binding.statusProcessing.setOnClickListener(comingSoonListener)
+        binding.statusShipped.setOnClickListener(comingSoonListener)
+        binding.statusReturns.setOnClickListener(comingSoonListener)
+
+        binding.itemAbout.itemTitle.text = "About Thrifty"
+        binding.itemShipping.itemTitle.text = "Shipping policy"
+        binding.itemPayment.itemTitle.text = "Payment methods"
+        binding.itemTerms.itemTitle.text = "Terms and conditions"
+        binding.itemPrivacy.itemTitle.text = "Privacy policy"
+        binding.itemSocial.itemTitle.text = "Social responsibility"
+        binding.itemCareers.itemTitle.text = "Careers"
+
+        binding.itemAbout.root.setOnClickListener {
+            val intent = Intent(this, FAQActivity::class.java)
             startActivity(intent)
         }
-
-        binding.helpButton.setOnClickListener {
-            Toast.makeText(this, "Help & Support coming soon!", Toast.LENGTH_SHORT).show()
-        }
+        binding.itemShipping.root.setOnClickListener(comingSoonListener)
+        binding.itemPayment.root.setOnClickListener(comingSoonListener)
+        binding.itemTerms.root.setOnClickListener(comingSoonListener)
+        binding.itemPrivacy.root.setOnClickListener(comingSoonListener)
+        binding.itemSocial.root.setOnClickListener(comingSoonListener)
+        binding.itemCareers.root.setOnClickListener(comingSoonListener)
 
         binding.switchToSellerButton.setOnClickListener {
             showSwitchToSellerConfirmation()

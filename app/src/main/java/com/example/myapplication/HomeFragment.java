@@ -36,6 +36,13 @@ public class HomeFragment extends Fragment implements ThriftShopAdapter.OnShopCl
             startActivity(intent);
         });
 
+        // Cart icon click listener
+        View cartIcon = view.findViewById(R.id.cart_icon);
+        cartIcon.setOnClickListener(v -> {
+            Intent intent = new Intent(getActivity(), CartActivity.class);
+            startActivity(intent);
+        });
+
         // Initialize RecyclerView for thrift shops
         recyclerShops = view.findViewById(R.id.recyclerShops);
         recyclerShops.setLayoutManager(new LinearLayoutManager(getContext()));

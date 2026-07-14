@@ -1,6 +1,5 @@
 package com.example.myapplication
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
@@ -36,11 +35,11 @@ class SellerMainActivity : AppCompatActivity() {
                     true
                 }
                 R.id.navigation_orders -> {
-                    startActivity(Intent(this, SellerOrdersActivity::class.java))
+                    loadFragment(SellerOrdersFragment())
                     true
                 }
                 R.id.navigation_account -> {
-                    startActivity(Intent(this, SellerAccountActivity::class.java))
+                    loadFragment(SellerAccountFragment())
                     true
                 }
                 else -> false

@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.example.myapplication.databinding.FragmentSellerDashboardBinding
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class SellerDashboardFragment : Fragment() {
     private var _binding: FragmentSellerDashboardBinding? = null
@@ -30,7 +31,11 @@ class SellerDashboardFragment : Fragment() {
         }
         
         binding.cardOrders.setOnClickListener {
-            startActivity(Intent(requireContext(), SellerOrdersActivity::class.java))
+            // Navigate to the Orders tab in SellerMainActivity
+            (activity as? SellerMainActivity)?.let { mainActivity ->
+                val bottomNav = mainActivity.findViewById<BottomNavigationView>(R.id.bottomNavigation)
+                bottomNav?.selectedItemId = R.id.navigation_orders
+            }
         }
         
         binding.btnSellerChats.setOnClickListener {

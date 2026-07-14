@@ -114,6 +114,8 @@ class SellerAccountActivity : AppCompatActivity() {
     }
 
     private fun setupButtons() {
+        binding.backButton.setOnClickListener { finish() }
+
         // Shop Location Button
         binding.btnIdentifyLocation.setOnClickListener {
             val intent = Intent(this, Maps::class.java)
@@ -150,7 +152,7 @@ class SellerAccountActivity : AppCompatActivity() {
                                 hideProgressDialog()
                                 binding.ivCoverPhoto.setImageResource(R.drawable.ic_add_photo)
                                 binding.btnDeleteCoverPhoto.visibility = android.view.View.GONE
-                                binding.btnSetCoverPhoto.text = "Set Cover Photo"
+                                binding.btnSetCoverPhoto.text = "Set Photo"
                                 binding.btnSave.visibility = android.view.View.GONE
                                 coverPhotoUrl = null
                                 Toast.makeText(this, "Cover photo deleted successfully", Toast.LENGTH_SHORT).show()
@@ -163,7 +165,7 @@ class SellerAccountActivity : AppCompatActivity() {
                         hideProgressDialog()
                         binding.ivCoverPhoto.setImageResource(R.drawable.ic_add_photo)
                         binding.btnDeleteCoverPhoto.visibility = android.view.View.GONE
-                        binding.btnSetCoverPhoto.text = "Set Cover Photo"
+                        binding.btnSetCoverPhoto.text = "Set Photo"
                         binding.btnSave.visibility = android.view.View.GONE
                         coverPhotoUrl = null
                         Toast.makeText(this, "Cover photo deleted successfully", Toast.LENGTH_SHORT).show()
@@ -173,16 +175,6 @@ class SellerAccountActivity : AppCompatActivity() {
                     hideProgressDialog()
                     Toast.makeText(this, "Failed to delete cover photo", Toast.LENGTH_SHORT).show()
                 }
-        }
-
-        // Edit Profile Button - Now just enables editing
-        binding.btnEditProfile.setOnClickListener {
-            enableEditing()
-        }
-
-        // Change Password Button
-        binding.btnChangePassword.setOnClickListener {
-            Toast.makeText(this, "Password change coming soon", Toast.LENGTH_SHORT).show()
         }
 
         // Logout Button

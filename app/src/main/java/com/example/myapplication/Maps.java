@@ -981,12 +981,12 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
         Log.d("Maps", "Setting up bottom navigation");
         if (bottomNavigation != null) {
             Log.d("Maps", "Bottom Navigation is not null, proceeding with setup");
-            bottomNavigation.setSelectedItemId(R.id.navigation_for_you);
+            bottomNavigation.setSelectedItemId(R.id.navigation_favorites);
             bottomNavigation.setVisibility(View.VISIBLE);
             bottomNavigation.setOnItemSelectedListener(item -> {
                 int itemId = item.getItemId();
                 Log.d("Maps", "Navigation item selected: " + itemId);
-                if (itemId == R.id.navigation_for_you) {
+                if (itemId == R.id.navigation_favorites) {
                     return true;
                 } else if (itemId == R.id.navigation_home) {
                     finish();

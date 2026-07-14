@@ -2,28 +2,50 @@
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#F5F5F5">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@android:color/white">
+        android:background="@android:color/transparent"
+        app:elevation="0dp">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp">
+            app:contentInsetStart="0dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Account Settings"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:textColor="@android:color/black" />
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:paddingHorizontal="16dp">
 
+                <ImageButton
+                    android:id="@+id/backButton"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_back"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:tint="@color/black" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="Seller account"
+                    android:textColor="@color/black"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toEndOf="@id/backButton"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
         </androidx.appcompat.widget.Toolbar>
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -38,13 +60,13 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Shop Profile Section -->
+            <!-- Shop Profile Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="4dp">
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -56,6 +78,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Shop Profile"
+                        android:textColor="@color/black"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="16dp" />
@@ -63,8 +86,12 @@
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                        android:layout_marginBottom="12dp"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusBottomEnd="12dp">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etShopName"
@@ -76,8 +103,12 @@
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                        android:layout_marginBottom="12dp"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        app:boxCornerRadiusTopStart="12dp"
+                        app:boxCornerRadiusTopEnd="12dp"
+                        app:boxCornerRadiusBottomStart="12dp"
+                        app:boxCornerRadiusBottomEnd="12dp">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etShopDescription"
@@ -90,13 +121,13 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Shop Location Section -->
+            <!-- Shop Location & Cover Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="4dp">
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -108,11 +139,11 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Shop Location"
+                        android:textColor="@color/black"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         android:layout_marginBottom="16dp" />
 
-                    <!-- Set Location Button (visible if no location is set) -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnIdentifyLocation"
                         android:layout_width="match_parent"
@@ -121,25 +152,23 @@
                         android:textAllCaps="false"
                         app:icon="@drawable/ic_location_on"
                         app:iconGravity="textStart"
-                        android:layout_marginBottom="12dp"
-                        android:visibility="visible" />
+                        app:cornerRadius="12dp"
+                        android:layout_marginBottom="12dp" />
 
-                    <!-- Mini Map Preview (visible if location is set) -->
                     <org.maplibre.android.maps.MapView
                         android:id="@+id/miniMapView"
                         android:layout_width="match_parent"
                         android:layout_height="160dp"
                         android:layout_marginBottom="12dp"
-                        android:background="@drawable/bottom_sheet_background"
                         android:visibility="gone" />
 
                     <TextView
                         android:id="@+id/tvCurrentLocation"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="12dp"
                         android:text="No location set"
-                        android:textColor="@android:color/darker_gray" />
+                        android:textColor="@color/gray_500" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnDeleteLocation"
@@ -149,43 +178,42 @@
                         android:textAllCaps="false"
                         app:icon="@android:drawable/ic_menu_delete"
                         app:iconGravity="textStart"
-                        android:layout_marginTop="8dp"
+                        app:cornerRadius="12dp"
                         android:visibility="gone" />
 
-                    <!-- Cover Photo Section -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Shop Cover Photo"
+                        android:textColor="@color/black"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:layout_marginTop="24dp"
+                        android:layout_marginTop="16dp"
                         android:layout_marginBottom="16dp" />
 
-                    <ImageView
+                    <com.google.android.material.imageview.ShapeableImageView
                         android:id="@+id/ivCoverPhoto"
                         android:layout_width="match_parent"
-                        android:layout_height="200dp"
+                        android:layout_height="180dp"
                         android:scaleType="centerCrop"
-                        android:background="@drawable/bottom_sheet_background"
                         android:src="@drawable/ic_add_photo"
-                        android:contentDescription="Shop Cover Photo" />
+                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize12"
+                        android:background="#EEEEEE" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:layout_marginTop="8dp">
+                        android:layout_marginTop="12dp">
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnSetCoverPhoto"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Set Cover Photo"
+                            android:text="Set Photo"
                             android:textAllCaps="false"
-                            app:icon="@drawable/ic_add_photo"
-                            app:iconGravity="textStart"
+                            app:cornerRadius="12dp"
                             android:layout_marginEnd="4dp" />
 
                         <com.google.android.material.button.MaterialButton
@@ -193,11 +221,9 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Save Photo"
+                            android:text="Save"
                             android:textAllCaps="false"
-                            app:icon="@drawable/ic_save"
-                            app:iconGravity="textStart"
-                            android:layout_marginEnd="4dp"
+                            app:cornerRadius="12dp"
                             android:visibility="gone" />
 
                         <com.google.android.material.button.MaterialButton
@@ -205,78 +231,24 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Delete Photo"
+                            android:text="Delete"
                             android:textAllCaps="false"
-                            app:icon="@android:drawable/ic_menu_delete"
-                            app:iconGravity="textStart"
-                            android:layout_marginStart="4dp"
+                            app:cornerRadius="12dp"
                             android:visibility="gone" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Account Settings Section -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="4dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Account Settings"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="16dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnEditProfile"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Edit Profile"
-                        android:textAllCaps="false"
-                        app:icon="@drawable/ic_edit"
-                        app:iconGravity="textStart"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnChangePassword"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Change Password"
-                        android:textAllCaps="false"
-                        app:icon="@drawable/ic_lock"
-                        app:iconGravity="textStart"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnLogout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Logout"
-                        android:textAllCaps="false"
-                        app:icon="@drawable/ic_logout"
-                        app:iconGravity="textStart"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:textColor="@android:color/holo_red_dark" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <Button
+            <!-- Buttons Section -->
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSwitchToCustomer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Switch to Customer Mode"
-                android:layout_marginTop="16dp"
-                android:backgroundTint="@color/design_default_color_primary"/>
+                android:textAllCaps="false"
+                android:paddingVertical="12dp"
+                android:backgroundTint="@color/primaryColor"
+                app:cornerRadius="12dp" />
 
             <TextView
                 android:id="@+id/tvSwitchToCustomerInfo"
@@ -284,8 +256,21 @@
                 android:layout_height="wrap_content"
                 android:text="Switch to customer mode to browse and purchase items from other sellers"
                 android:textSize="12sp"
-                android:layout_marginTop="4dp"
-                android:layout_marginBottom="16dp"/>
+                android:textColor="@color/gray_500"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp"
+                android:gravity="center" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnLogout"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Logout"
+                android:textAllCaps="false"
+                android:textColor="@android:color/holo_red_dark" />
+
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
-</androidx.coordinatorlayout.widget.CoordinatorLayout> 
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

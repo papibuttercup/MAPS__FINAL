@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#121212"
+    android:background="@color/background"
     android:fillViewport="true">
 
     <LinearLayout
@@ -18,14 +18,14 @@
             android:text="Sign in"
             android:textSize="34sp"
             android:textStyle="bold"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/textPrimary"
             android:paddingBottom="8dp" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Thrifty – Smart Spending, Stylish Saving."
-            android:textColor="#B3FFFFFF"
+            android:textColor="@color/textSecondary"
             android:paddingBottom="24dp" />
 
         <!-- Email -->
@@ -34,14 +34,14 @@
             android:layout_height="wrap_content"
             android:text="Email"
             android:textStyle="bold"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/textPrimary"
             android:paddingBottom="4dp" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
-            android:textColorHint="#80FFFFFF"
+            android:textColorHint="@color/textSecondary"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -50,8 +50,8 @@
                 android:layout_height="50dp"
                 android:hint="Enter your email"
                 android:inputType="textEmailAddress"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#80FFFFFF" />
+                android:textColor="@color/textPrimary"
+                android:textColorHint="@color/textSecondary" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Password -->
@@ -60,14 +60,14 @@
             android:layout_height="wrap_content"
             android:text="Password"
             android:textStyle="bold"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/textPrimary"
             android:paddingBottom="4dp" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
-            android:textColorHint="#80FFFFFF"
+            android:textColorHint="@color/textSecondary"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -76,8 +76,8 @@
                 android:layout_height="50dp"
                 android:hint="Enter your password"
                 android:inputType="textPassword"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#80FFFFFF" />
+                android:textColor="@color/textPrimary"
+                android:textColorHint="@color/textSecondary" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Remember Me & Forgot Password -->
@@ -91,8 +91,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Remember me"
-                android:textColor="#B3FFFFFF"
-                android:buttonTint="#BB86FC"
+                android:textColor="@color/textSecondary"
+                android:buttonTint="@color/colorAccent"
                 android:layout_alignParentStart="true" />
 
             <TextView
@@ -100,7 +100,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Forgot password?"
-                android:textColor="#03A9F4"
+                android:textColor="@color/colorAccent"
                 android:layout_alignParentEnd="true"
                 android:clickable="true" />
         </RelativeLayout>
@@ -117,16 +117,16 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:visibility="gone"
-                android:indeterminateTint="#BB86FC" />
+                android:indeterminateTint="@color/colorAccent" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/loginButton"
                 android:layout_width="match_parent"
                 android:layout_height="50dp"
                 android:text="Login"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/textPrimary"
                 android:textStyle="bold"
-                android:backgroundTint="#03A9F4" />
+                android:backgroundTint="@color/primaryColor" />
         </FrameLayout>
 
         <!-- Create Account Buttons -->
@@ -135,9 +135,9 @@
             android:layout_width="match_parent"
             android:layout_height="50dp"
             android:text="Create Customer Account"
-            android:textColor="#03A9F4"
-            android:backgroundTint="#1F1F1F"
-            android:strokeColor="#03A9F4"
+            android:textColor="@color/colorAccent"
+            android:backgroundTint="@color/background"
+            android:strokeColor="@color/colorAccent"
             android:strokeWidth="1"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_marginBottom="12dp" />
@@ -147,9 +147,9 @@
             android:layout_width="match_parent"
             android:layout_height="50dp"
             android:text="Create Seller Account"
-            android:textColor="#03A9F4"
-            android:backgroundTint="#1F1F1F"
-            android:strokeColor="#03A9F4"
+            android:textColor="@color/colorAccent"
+            android:backgroundTint="@color/background"
+            android:strokeColor="@color/colorAccent"
             android:strokeWidth="1"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_marginBottom="24dp" />
@@ -163,16 +163,16 @@
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="#2C2C2C"
+                android:background="@color/dividerColor"
                 android:layout_centerVertical="true" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Or continue with"
-                android:background="#121212"
+                android:background="@color/background"
                 android:paddingHorizontal="8dp"
-                android:textColor="#B3FFFFFF"
+                android:textColor="@color/textSecondary"
                 android:layout_centerInParent="true" />
         </RelativeLayout>
 
@@ -193,9 +193,9 @@
                 android:layout_marginEnd="8dp"
                 android:layout_weight="1"
                 android:text="GOOGLE"
-                android:textColor="#FFFFFF"
-                android:backgroundTint="#1F1F1F"
-                android:strokeColor="#2C2C2C"
+                android:textColor="@color/textPrimary"
+                android:backgroundTint="@color/background"
+                android:strokeColor="@color/dividerColor"
                 android:drawableLeft="@drawable/ic_google"
                 android:drawablePadding="8dp"
                 android:gravity="center"
@@ -211,9 +211,9 @@
                 android:layout_height="50dp"
                 android:layout_weight="1"
                 android:text="FACEBOOK"
-                android:textColor="#FFFFFF"
-                android:backgroundTint="#1F1F1F"
-                android:strokeColor="#2C2C2C"
+                android:textColor="@color/textPrimary"
+                android:backgroundTint="@color/background"
+                android:strokeColor="@color/dividerColor"
                 android:drawableLeft="@drawable/ic_facebook"
                 android:drawablePadding="8dp"
                 android:gravity="center"

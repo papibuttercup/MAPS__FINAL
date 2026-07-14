@@ -39,13 +39,19 @@
             android:value="@string/maptiler_api_key" />
 
         <activity
-            android:name=".LoginActivity"
+            android:name=".SplashActivity"
             android:exported="true"
-            android:theme="@style/Theme.MyApplication">
+            android:theme="@style/Theme.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".LoginActivity"
+            android:exported="true"
+            android:theme="@style/Theme.MyApplication">
         </activity>
 
         <activity
@@ -135,8 +141,6 @@
 
         <activity android:name=".ProductDetailsActivity"/>
 
-        <activity android:name=".SellerOrdersActivity"/>
-
         <activity android:name=".BuyNowActivity" />
 
         <activity android:name=".ChatActivity" />
@@ -152,12 +156,6 @@
             android:theme="@style/Theme.MyApplication" />
 
         <activity android:name=".CustomerChatListActivity" />
-
-        <activity
-            android:name=".CustomerOrdersActivity"
-            android:exported="false"
-            android:label="My Orders"
-            android:parentActivityName=".LandingActivity" />
 
         <activity android:name=".CartActivity" />
     </application>
