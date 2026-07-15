@@ -51,23 +51,30 @@ class AccountFragment : Fragment() {
         }
 
         binding.editProfileButton.setOnClickListener {
-             val intent = Intent(requireContext(), EditProfileActivity::class.java)
+             val intent = Intent(requireContext(), AccountSettingsActivity::class.java)
              startActivity(intent)
         }
 
         binding.viewOrderHistory.setOnClickListener {
-            // Navigate to the Orders screen directly since the tab is gone
-            (activity as? LandingActivity)?.showOrders()
+            (activity as? LandingActivity)?.showOrders(0) // All
+        }
+
+        binding.statusUnpaid.setOnClickListener {
+            (activity as? LandingActivity)?.showOrders(1) // To Pay
+        }
+        binding.statusProcessing.setOnClickListener {
+            (activity as? LandingActivity)?.showOrders(2) // To Ship
+        }
+        binding.statusShipped.setOnClickListener {
+            (activity as? LandingActivity)?.showOrders(3) // To Receive
+        }
+        binding.statusReturns.setOnClickListener {
+            (activity as? LandingActivity)?.showOrders(5) // Returns
         }
 
         val comingSoonListener = View.OnClickListener {
             Toast.makeText(requireContext(), "Coming soon!", Toast.LENGTH_SHORT).show()
         }
-
-        binding.statusUnpaid.setOnClickListener(comingSoonListener)
-        binding.statusProcessing.setOnClickListener(comingSoonListener)
-        binding.statusShipped.setOnClickListener(comingSoonListener)
-        binding.statusReturns.setOnClickListener(comingSoonListener)
 
         binding.itemAbout.itemTitle.text = "About Thrifty"
         binding.itemShipping.itemTitle.text = "Shipping policy"

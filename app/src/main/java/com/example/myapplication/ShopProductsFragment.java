@@ -27,6 +27,7 @@ import com.google.firebase.firestore.ListenerRegistration;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.graphics.Color;
+import androidx.core.content.ContextCompat;
 import com.google.android.material.tabs.TabLayout;
 
 public class ShopProductsFragment extends Fragment implements CategoryAdapter.OnCategoryClickListener {
@@ -55,6 +56,8 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
     private View layoutProductsView, layoutCategoriesView;
     private TabLayout shopTabLayout;
     private TextView btnSortPopular, btnSortLatest, btnSortPrice;
+    private Button btnFollowShop;
+    private boolean isFollowing = false;
     private String currentSearchQuery = "";
     private String currentSortOrder = "latest"; // "popular", "latest", "price_asc", "price_desc"
 
@@ -86,6 +89,7 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
         txtFollowersCount = view.findViewById(R.id.txtFollowersCount);
         imgShopLogo = view.findViewById(R.id.imgShopLogo);
         btnMessageShop = view.findViewById(R.id.btnMessageShop);
+        btnFollowShop = view.findViewById(R.id.btnFollowShop);
 
         // Action Buttons
         btnMessageShop.setOnClickListener(v -> {
@@ -99,9 +103,7 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
             }
         });
 
-        view.findViewById(R.id.btnFollowShop).setOnClickListener(v -> 
-            Toast.makeText(getContext(), "Following " + shopName, Toast.LENGTH_SHORT).show()
-        );
+        btnFollowShop.setOnClickListener(v -> toggleFollow());
 
         // Tabs
         shopTabLayout = view.findViewById(R.id.shopTabLayout);
@@ -203,16 +205,96 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
                     if (avgRating != null) {
                         txtShopRating.setText(String.format("%.1f", avgRating));
                     }
+                    Long followerCount = doc.getLong("followerCount");
+                    if (followerCount != null) {
+                        txtFollowersCount.setText(getString(R.string.followers_count_format, followerCount));
+                    } else {
+                        txtFollowersCount.setText(getString(R.string.followers_count_format, 0));
+                    }
                 }
             });
+
+        checkFollowStatus();
+    }
+
+    private void checkFollowStatus() {
+        com.google.firebase.auth.FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null || sellerId == null) return;
+        String currentUserId = currentUser.getUid();
+
+        db.collection("users").document(currentUserId)
+            .collection("following").document(sellerId)
+            .get()
+            .addOnSuccessListener(doc -> {
+                isFollowing = doc.exists();
+                updateFollowButtonUI();
+            });
+    }
+
+    private void updateFollowButtonUI() {
+        if (isFollowing) {
+            btnFollowShop.setText("Following");
+            btnFollowShop.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.GRAY));
+        } else {
+            btnFollowShop.setText("Follow");
+            btnFollowShop.setBackgroundTintList(android.content.res.ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.colorAccent)));
+        }
+    }
+
+    private void toggleFollow() {
+        com.google.firebase.auth.FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null || sellerId == null) return;
+        String currentUserId = currentUser.getUid();
+        if (currentUserId.equals(sellerId)) {
+            Toast.makeText(getContext(), "You cannot follow your own shop.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        com.google.firebase.firestore.WriteBatch batch = db.batch();
+        com.google.firebase.firestore.DocumentReference sellerRef = db.collection("sellers").document(sellerId);
+        com.google.firebase.firestore.DocumentReference followerRef = sellerRef.collection("followers").document(currentUserId);
+        com.google.firebase.firestore.DocumentReference followingRef = db.collection("users").document(currentUserId)
+                .collection("following").document(sellerId);
+
+        if (isFollowing) {
+            // Unfollow
+            batch.delete(followerRef);
+            batch.delete(followingRef);
+            batch.update(sellerRef, "followerCount", com.google.firebase.firestore.FieldValue.increment(-1));
+        } else {
+            // Follow
+            java.util.Map<String, Object> data = new java.util.HashMap<>();
+            data.put("timestamp", System.currentTimeMillis());
+            batch.set(followerRef, data);
+            batch.set(followingRef, data);
+            batch.update(sellerRef, "followerCount", com.google.firebase.firestore.FieldValue.increment(1));
+        }
+
+        btnFollowShop.setEnabled(false);
+        batch.commit().addOnCompleteListener(task -> {
+            btnFollowShop.setEnabled(true);
+            if (task.isSuccessful()) {
+                isFollowing = !isFollowing;
+                updateFollowButtonUI();
+                // Optionally refresh follower count UI immediately
+                db.collection("sellers").document(sellerId).get().addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        Long count = doc.getLong("followerCount");
+                        txtFollowersCount.setText(getString(R.string.followers_count_format, (count != null ? count : 0)));
+                    }
+                });
+            } else {
+                Toast.makeText(getContext(), "Action failed: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void updateSort(String order) {
         currentSortOrder = order;
         // Update UI colors
-        btnSortPopular.setTextColor(order.equals("popular") ? Color.parseColor("#FF4500") : Color.BLACK);
-        btnSortLatest.setTextColor(order.equals("latest") ? Color.parseColor("#FF4500") : Color.BLACK);
-        btnSortPrice.setTextColor(order.startsWith("price") ? Color.parseColor("#FF4500") : Color.BLACK);
+        btnSortPopular.setTextColor(order.equals("popular") ? ContextCompat.getColor(requireContext(), R.color.colorAccent) : Color.BLACK);
+        btnSortLatest.setTextColor(order.equals("latest") ? ContextCompat.getColor(requireContext(), R.color.colorAccent) : Color.BLACK);
+        btnSortPrice.setTextColor(order.startsWith("price") ? ContextCompat.getColor(requireContext(), R.color.colorAccent) : Color.BLACK);
         
         if (order.equals("price_asc")) btnSortPrice.setText("Price ↑");
         else if (order.equals("price_desc")) btnSortPrice.setText("Price ↓");

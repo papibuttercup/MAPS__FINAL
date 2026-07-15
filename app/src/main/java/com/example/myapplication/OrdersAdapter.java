@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.firebase.firestore.FirebaseFirestore;
 import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 
 public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder> {
@@ -49,26 +50,83 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
         Order order = orders.get(position);
         
         holder.orderId.setText("Order #" + (order.orderId != null ? order.orderId : ""));
-        holder.customerInfo.setText(String.format("Customer: %s\nPhone: %s", 
-            order.customerName != null ? order.customerName : "Unknown",
-            order.customerPhone != null ? order.customerPhone : "Unknown"));
+        String customerName = order.customerName != null && !order.customerName.isEmpty() ? order.customerName : "Unknown Customer";
+        String customerPhone = order.customerPhone != null && !order.customerPhone.isEmpty() ? order.customerPhone : "N/A";
+        holder.customerInfo.setText(String.format("Customer: %s\nPhone: %s", customerName, customerPhone));
+
+        // If customer is unknown, try to fetch from Firestore users collection
+        if ("Unknown Customer".equals(customerName) && order.customerId != null) {
+            db.collection("users").document(order.customerId).get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        String firstName = doc.getString("firstName");
+                        String lastName = doc.getString("lastName");
+                        String fullName = "";
+                        if (firstName != null) fullName += firstName;
+                        if (lastName != null) fullName += (fullName.isEmpty() ? "" : " ") + lastName;
+                        
+                        String phone = doc.getString("phone");
+                        
+                        if (!fullName.trim().isEmpty()) {
+                            holder.customerInfo.setText(String.format("Customer: %s\nPhone: %s", 
+                                fullName.trim(), phone != null ? phone : "N/A"));
+                        }
+                    }
+                });
+        }
         
-        // Format item details using individual product fields
+        // Format item details handling both top-level product and 'products' list (from cart)
         StringBuilder itemDetails = new StringBuilder();
         itemDetails.append("Items:\n");
-        itemDetails.append(String.format("- %s (x%d) - %s, %s", 
-            order.productName != null ? order.productName : "Unknown Product",
-            order.quantity > 0 ? order.quantity : 1, // Default to 1 if quantity is 0
-            order.selectedColor != null ? order.selectedColor : "N/A",
-            order.selectedSize != null ? order.selectedSize : "N/A"
-        ));
         
-        itemDetails.append(String.format("\nDelivery: %s", 
-            order.deliveryAddress != null ? order.deliveryAddress : "No address"));
+        if (order.products != null && !order.products.isEmpty()) {
+            // Multi-product order (from Cart)
+            for (Map<String, Object> productMap : order.products) {
+                String name = (String) productMap.get("name");
+                if (name == null) name = (String) productMap.get("productName");
+                if (name == null) name = "Unknown Product";
+                
+                Object qtyObj = productMap.get("quantity");
+                int qty = 1;
+                if (qtyObj instanceof Long) qty = ((Long) qtyObj).intValue();
+                else if (qtyObj instanceof Integer) qty = (Integer) qtyObj;
+                
+                String color = (String) productMap.get("color");
+                if (color == null) color = (String) productMap.get("selectedColor");
+                String size = (String) productMap.get("size");
+                if (size == null) size = (String) productMap.get("selectedSize");
+                
+                itemDetails.append(String.format("- %s (x%d)%s%s\n", 
+                    name, qty, 
+                    color != null ? ", " + color : "",
+                    size != null ? ", " + size : ""
+                ));
+            }
+        } else {
+            // Single-product order (from Maps or Buy Now)
+            itemDetails.append(String.format("- %s (x%d)%s%s\n", 
+                order.productName != null ? order.productName : "Unknown Product",
+                order.quantity > 0 ? order.quantity : 1,
+                order.selectedColor != null ? ", " + order.selectedColor : "",
+                order.selectedSize != null ? ", " + order.selectedSize : ""
+            ));
+        }
+        
+        String address = order.deliveryAddress != null && !order.deliveryAddress.isEmpty() ? order.deliveryAddress : "No address provided";
+        itemDetails.append(String.format("Delivery: %s", address));
 
-        holder.orderDetails.setText(itemDetails.toString());
+        holder.orderDetails.setText(itemDetails.toString().trim());
             
-        holder.totalPrice.setText(String.format("Total: ₱%.2f", order.totalAmount));
+        double finalAmount = order.totalAmount;
+        if (finalAmount == 0) {
+            // Fallback for older data
+            if (order.totalPrice > 0) {
+                finalAmount = order.totalPrice;
+            } else if (order.price > 0) {
+                finalAmount = order.price * (order.quantity > 0 ? order.quantity : 1);
+            }
+        }
+        holder.totalPrice.setText(String.format("Total: ₱%.2f", finalAmount));
         holder.orderStatus.setText(String.format("Status: %s\nDate: %s", 
             getFriendlyStatus(order.status),
             order.timestamp != null ? dateFormat.format(order.timestamp.toDate()) : "Unknown"));

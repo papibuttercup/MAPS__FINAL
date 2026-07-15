@@ -40,9 +40,8 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.CartViewHolder
         CartItem item = cartItems.get(position);
         holder.txtName.setText(item.name != null ? item.name : "");
         holder.txtPrice.setText("₱" + item.price);
-        holder.txtQuantity.setText("Qty: " + item.quantity);
-        holder.txtColor.setText("Color: " + (item.color != null ? item.color : "-"));
-        holder.txtSize.setText("Size: " + (item.size != null ? item.size : "-"));
+        holder.txtQuantity.setText(String.valueOf(item.quantity));
+        holder.txtSize.setText(item.size != null ? item.size : "-");
         if (item.imageUrl != null && !item.imageUrl.isEmpty()) {
             Glide.with(holder.itemView.getContext()).load(item.imageUrl).into(holder.imgProduct);
         } else {
@@ -109,7 +108,7 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.CartViewHolder
 
     static class CartViewHolder extends RecyclerView.ViewHolder {
         ImageView imgProduct;
-        TextView txtName, txtPrice, txtQuantity, txtColor, txtSize;
+        TextView txtName, txtPrice, txtQuantity, txtSize;
         Button btnDecrease, btnIncrease, btnRemove;
         public CartViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -117,7 +116,6 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.CartViewHolder
             txtName = itemView.findViewById(R.id.txtName);
             txtPrice = itemView.findViewById(R.id.txtPrice);
             txtQuantity = itemView.findViewById(R.id.txtQuantity);
-            txtColor = itemView.findViewById(R.id.txtColor);
             txtSize = itemView.findViewById(R.id.txtSize);
             btnDecrease = itemView.findViewById(R.id.btnDecrease);
             btnIncrease = itemView.findViewById(R.id.btnIncrease);

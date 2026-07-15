@@ -733,91 +733,121 @@ public class Maps extends AppCompatActivity implements OnMapReadyCallback {
             return;
         }
 
-        // Use Firestore's auto-generated order ID
-        DocumentReference orderRef = db.collection("orders").document();
-        String orderId = orderRef.getId();
+        // Fetch customer info first to ensure it's included in the order
+        db.collection("users").document(currentUser.getUid()).get()
+            .addOnSuccessListener(customerDoc -> {
+                String customerName = "Unknown Customer";
+                String customerPhone = "N/A";
+                String deliveryAddress = "N/A";
 
-        Map<String, Object> orderData = new HashMap<>();
-        orderData.put("orderId", orderId);
-        orderData.put("productId", product.id);
-        orderData.put("productName", product.name);
-        orderData.put("price", product.price);
-        orderData.put("sellerId", product.sellerId);
-        orderData.put("customerId", currentUser.getUid());
-        orderData.put("status", "pending");
-        orderData.put("timestamp", FieldValue.serverTimestamp());
-        orderData.put("quantity", 1); // Default quantity for map orders
-
-        // Start transaction to update stock and create order
-        db.runTransaction(transaction -> {
-            // Get current product data
-            DocumentSnapshot productDoc = transaction.get(
-                db.collection("products").document(product.id)
-            );
-
-            if (!productDoc.exists()) {
-                throw new FirebaseFirestoreException("Product not found", 
-                    FirebaseFirestoreException.Code.NOT_FOUND);
-            }
-
-            // Get current stock entries
-            List<Map<String, Object>> stockEntries = 
-                (List<Map<String, Object>>) productDoc.get("stockEntries");
-            if (stockEntries == null) {
-                throw new FirebaseFirestoreException("No stock entries found", 
-                    FirebaseFirestoreException.Code.NOT_FOUND);
-            }
-
-            // Find and update the first available stock entry
-            boolean stockUpdated = false;
-            for (Map<String, Object> entry : stockEntries) {
-                Long stock = (Long) entry.get("stock");
-                if (stock != null && stock > 0) {
-                    entry.put("stock", stock - 1);
-                    stockUpdated = true;
-                    break;
+                if (customerDoc.exists()) {
+                    String firstName = customerDoc.getString("firstName");
+                    String lastName = customerDoc.getString("lastName");
+                    if (firstName != null || lastName != null) {
+                        customerName = (firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "");
+                        customerName = customerName.trim();
+                    }
+                    customerPhone = customerDoc.getString("phone");
+                    deliveryAddress = customerDoc.getString("address");
                 }
-            }
 
-            if (!stockUpdated) {
-                throw new FirebaseFirestoreException("No stock available", 
-                    FirebaseFirestoreException.Code.FAILED_PRECONDITION);
-            }
+                // Use Firestore's auto-generated order ID
+                DocumentReference orderRef = db.collection("orders").document();
+                String orderId = orderRef.getId();
 
-            // Update product stock entries
-            transaction.update(
-                db.collection("products").document(product.id),
-                "stockEntries", stockEntries
-            );
+                Map<String, Object> orderData = new HashMap<>();
+                orderData.put("orderId", orderId);
+                orderData.put("productId", product.id);
+                orderData.put("productName", product.name);
+                orderData.put("price", product.price);
+                orderData.put("totalAmount", product.price); // totalAmount for standardized display
+                orderData.put("totalPrice", product.price);  // totalPrice for repository consistency
+                orderData.put("sellerId", product.sellerId);
+                orderData.put("customerId", currentUser.getUid());
+                orderData.put("customerName", customerName);
+                orderData.put("customerPhone", customerPhone != null ? customerPhone : "N/A");
+                orderData.put("deliveryAddress", deliveryAddress != null ? deliveryAddress : "N/A");
+                orderData.put("status", "pending");
+                orderData.put("timestamp", FieldValue.serverTimestamp());
+                orderData.put("orderDate", new java.util.Date());
+                orderData.put("quantity", 1); // Default quantity for map orders
 
-            // Create order
-            transaction.set(orderRef, orderData);
+                // Start transaction to update stock and create order
+                db.runTransaction(transaction -> {
+                    // Get current product data
+                    DocumentSnapshot productDoc = transaction.get(
+                        db.collection("products").document(product.id)
+                    );
 
-            return null;
-        })
-        .addOnSuccessListener(aVoid -> {
-            showToast("Order placed successfully");
-        })
-        .addOnFailureListener(e -> {
-            String errorMessage = "Failed to place order: ";
-            if (e instanceof FirebaseFirestoreException) {
-                FirebaseFirestoreException fe = (FirebaseFirestoreException) e;
-                switch (fe.getCode()) {
-                    case NOT_FOUND:
-                        errorMessage += "Product or stock entry not found";
-                        break;
-                    case FAILED_PRECONDITION:
-                        errorMessage += "No stock available";
-                        break;
-                    default:
-                        errorMessage += e.getMessage();
-                }
-            } else {
-                errorMessage += e.getMessage();
-            }
-            showToast(errorMessage);
-            Log.e("Maps", "Error placing order", e);
-        });
+                    if (!productDoc.exists()) {
+                        throw new FirebaseFirestoreException("Product not found", 
+                            FirebaseFirestoreException.Code.NOT_FOUND);
+                    }
+
+                    // Get current stock entries
+                    List<Map<String, Object>> stockEntries = 
+                        (List<Map<String, Object>>) productDoc.get("stockEntries");
+                    if (stockEntries == null) {
+                        throw new FirebaseFirestoreException("No stock entries found", 
+                            FirebaseFirestoreException.Code.NOT_FOUND);
+                    }
+
+                    // Find and update the first available stock entry and recalculate total stock
+                    boolean stockUpdated = false;
+                    long newTotalStock = 0;
+                    for (Map<String, Object> entry : stockEntries) {
+                        Long stock = (Long) entry.get("stock");
+                        if (!stockUpdated && stock != null && stock > 0) {
+                            entry.put("stock", stock - 1);
+                            stockUpdated = true;
+                        }
+                        
+                        Long updatedStock = (Long) entry.get("stock");
+                        if (updatedStock != null) {
+                            newTotalStock += updatedStock;
+                        }
+                    }
+
+                    if (!stockUpdated) {
+                        throw new FirebaseFirestoreException("No stock available", 
+                            FirebaseFirestoreException.Code.FAILED_PRECONDITION);
+                    }
+
+                    // Update product document: stockEntries and overall stock
+                    DocumentReference productRef = db.collection("products").document(product.id);
+                    transaction.update(productRef, "stockEntries", stockEntries);
+                    transaction.update(productRef, "stock", newTotalStock);
+
+                    // Create order
+                    transaction.set(orderRef, orderData);
+
+                    // Also add to customer and seller subcollections for faster lookup
+                    DocumentReference customerOrderRef = db.collection("users")
+                        .document(currentUser.getUid())
+                        .collection("orders")
+                        .document(orderId);
+                    transaction.set(customerOrderRef, orderData);
+
+                    DocumentReference sellerOrderRef = db.collection("sellers")
+                        .document(product.sellerId)
+                        .collection("orders")
+                        .document(orderId);
+                    transaction.set(sellerOrderRef, orderData);
+
+                    return null;
+                })
+                .addOnSuccessListener(aVoid -> {
+                    showToast("Order placed successfully");
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("Maps", "Error placing order", e);
+                    showToast("Error placing order: " + e.getMessage());
+                });
+            })
+            .addOnFailureListener(e -> {
+                Log.e("Maps", "Error fetching user info", e);
+                showToast("Could not fetch your profile. Please try again.");
+            });
     }
 
     private class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductViewHolder> {

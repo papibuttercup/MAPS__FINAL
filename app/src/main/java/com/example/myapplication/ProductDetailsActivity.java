@@ -158,7 +158,7 @@ public class ProductDetailsActivity extends AppCompatActivity {
                             startActivity(intent);
                         }
                     });
-                    txtSellerName.setTextColor(Color.parseColor("#8B2CF5"));
+                    txtSellerName.setTextColor(ContextCompat.getColor(this, R.color.colorAccent));
                     txtSellerName.setPaintFlags(txtSellerName.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
                     txtSellerName.setClickable(true);
 

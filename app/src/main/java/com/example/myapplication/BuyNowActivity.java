@@ -650,6 +650,8 @@ public class BuyNowActivity extends AppCompatActivity {
             orderData.put("selectedColor", selectedColor);
             orderData.put("selectedSize", selectedSize);
             orderData.put("totalAmount", totalAmount);
+            orderData.put("price", productPrice); // Field used by some parts of the app
+            orderData.put("totalPrice", totalAmount); // Field used by OrderRepository
             orderData.put("customerId", currentUserId);
             orderData.put("customerName", etName.getText().toString().trim());
             orderData.put("customerPhone", etPhone.getText().toString().trim());

@@ -180,4 +180,5 @@
     </string-array>
     <string name="select_color">Select Color</string>
     <string name="select_size">Select Size</string>
+    <string name="followers_count_format">%1$d Followers</string>
 </resources>

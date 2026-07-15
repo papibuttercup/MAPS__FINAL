@@ -41,8 +41,12 @@ public class Message {
         return timestamp;
     }
 
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
+    public void setTimestamp(Object timestamp) {
+        if (timestamp instanceof Long) {
+            this.timestamp = (Long) timestamp;
+        } else if (timestamp instanceof com.google.firebase.Timestamp) {
+            this.timestamp = ((com.google.firebase.Timestamp) timestamp).toDate().getTime();
+        }
     }
 
     public boolean isRead() {

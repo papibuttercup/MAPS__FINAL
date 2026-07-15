@@ -31,13 +31,14 @@ public class Order {
     // Required empty constructor for Firestore
     public Order() {}
 
-    // Setter for timestamp to handle both Long and Timestamp from Firestore
     public void setTimestamp(Object timestamp) {
         if (timestamp instanceof Timestamp) {
             this.timestamp = (Timestamp) timestamp;
         } else if (timestamp instanceof Long) {
             // Convert Long (milliseconds) to Timestamp
-            this.timestamp = new Timestamp(new Date((Long) timestamp));
+            this.timestamp = new Timestamp(new java.util.Date((Long) timestamp));
+        } else if (timestamp instanceof java.util.Date) {
+            this.timestamp = new Timestamp((java.util.Date) timestamp);
         } else {
              // Handle other cases or set to null/default
              this.timestamp = null;

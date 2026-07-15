@@ -54,7 +54,7 @@
                     android:id="@+id/productPrice"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="#8B2CF5"
+                    android:textColor="@color/colorAccent"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:layout_marginTop="2dp"/>

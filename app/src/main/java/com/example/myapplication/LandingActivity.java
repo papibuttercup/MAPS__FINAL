@@ -44,9 +44,13 @@ public class LandingActivity extends AppCompatActivity {
     }
 
     public void showOrders() {
+        showOrders(0);
+    }
+
+    public void showOrders(int tabIndex) {
         getSupportFragmentManager()
             .beginTransaction()
-            .replace(R.id.fragment_container, new CustomerOrdersFragment())
+            .replace(R.id.fragment_container, CustomerOrdersFragment.newInstance(tabIndex))
             .addToBackStack(null)
             .commit();
     }

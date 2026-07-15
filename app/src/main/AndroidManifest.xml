@@ -158,5 +158,12 @@
         <activity android:name=".CustomerChatListActivity" />
 
         <activity android:name=".CartActivity" />
+        <activity android:name=".OrderSuccessActivity" />
+        <activity android:name=".AccountSettingsActivity" />
+        <activity android:name=".AccountSecurityActivity" />
+        <activity android:name=".MyAddressesActivity" />
+        <activity android:name=".AddAddressActivity" />
+        <activity android:name=".BankAccountsActivity" />
+        <activity android:name=".SelectLanguageActivity" />
     </application>
 </manifest>

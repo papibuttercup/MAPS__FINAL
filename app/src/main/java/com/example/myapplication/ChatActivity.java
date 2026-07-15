@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -267,7 +268,7 @@ public class ChatActivity extends AppCompatActivity {
         Message message = new Message();
         message.setSenderId(currentUserId);
         message.setContent(messageText);
-        message.setTimestamp(System.currentTimeMillis());
+        message.setTimestamp(System.currentTimeMillis()); // Local preview, will be overwritten by server if needed or kept for immediate display
 
         // Only attach product info if not already sent
         if (!hasSentProductMessage && productCard.getVisibility() == View.VISIBLE && productId != null) {
@@ -283,9 +284,21 @@ public class ChatActivity extends AppCompatActivity {
             hasSentProductMessage = true;
         }
 
+        Map<String, Object> messageMap = new HashMap<>();
+        messageMap.put("senderId", message.getSenderId());
+        messageMap.put("content", message.getContent());
+        messageMap.put("timestamp", FieldValue.serverTimestamp());
+        messageMap.put("isRead", message.isRead());
+        if (message.getProductId() != null) {
+            messageMap.put("productId", message.getProductId());
+            messageMap.put("productName", message.getProductName());
+            messageMap.put("productImage", message.getProductImage());
+            messageMap.put("productPrice", message.getProductPrice());
+        }
+
         db.collection("chats").document(chatId)
             .collection("messages")
-            .add(message)
+            .add(messageMap)
             .addOnSuccessListener(documentReference -> {
                 // Update last message in chat document
                 Map<String, Object> updates = new HashMap<>();

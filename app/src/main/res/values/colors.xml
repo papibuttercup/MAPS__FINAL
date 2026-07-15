@@ -4,28 +4,29 @@
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
 
-    <!-- Gray Scale -->
-    <color name="gray_900">#222222</color>
-    <color name="gray_800">#333333</color>
-    <color name="gray_700">#444444</color>
-    <color name="gray_600">#555555</color>
-    <color name="gray_500">#666666</color>
-    <color name="gray_400">#777777</color>
-    <color name="gray_300">#888888</color>
-    <color name="gray_200">#AAAAAA</color>
-    <color name="gray_100">#CCCCCC</color>
-    <color name="gray_50">#EEEEEE</color>
+    <!-- Gray Scale (Primary Palette) -->
+    <color name="gray_900">#121212</color>
+    <color name="gray_800">#2B2B2B</color>
+    <color name="gray_700">#454545</color>
+    <color name="gray_600">#5F5F5F</color>
+    <color name="gray_500">#797979</color>
+    <color name="gray_400">#939393</color>
+    <color name="gray_300">#ADADAD</color>
+    <color name="gray_200">#C7C7C7</color>
+    <color name="gray_100">#E1E1E1</color>
+    <color name="gray_50">#F5F5F5</color>
 
     <!-- Theme Colors -->
-    <color name="colorPrimary">#5D4037</color>
-    <color name="colorAccent">#E64A19</color>
-    <color name="background">#FFFBFA</color>
-    <color name="dividerColor">#D7CCC8</color>
-    <color name="textPrimary">#3E2723</color>
-    <color name="textSecondary">#8D6E63</color>
-    <color name="iconColor">#E64A19</color>
-    <color name="primaryColor">#E64A19</color>
-    <color name="purple_500">#BF360C</color>
+    <color name="colorPrimary">#000000</color>
+    <color name="colorAccent">#FF5A00</color>
+    <color name="background">#FFFBF2</color>
+    <color name="dividerColor">#E1E1E1</color>
+    <color name="textPrimary">#121212</color>
+    <color name="textSecondary">#5F5F5F</color>
+    <color name="iconColor">#FF5A00</color>
+    <color name="primaryColor">#000000</color>
+    <color name="secondaryColor">#FF5A00</color>
+    <color name="purple_500">#FF5A00</color>
 
     <!-- UI Component Colors -->
     <color name="chip_background">#F5F5F5</color>
