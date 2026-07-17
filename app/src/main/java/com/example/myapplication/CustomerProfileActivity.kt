@@ -7,21 +7,14 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.example.myapplication.databinding.ActivityCustomerProfileBinding
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 
 class CustomerProfileActivity : AppCompatActivity() {
     private lateinit var binding: ActivityCustomerProfileBinding
-    private lateinit var auth: FirebaseAuth
-    private lateinit var db: FirebaseFirestore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityCustomerProfileBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        auth = FirebaseAuth.getInstance()
-        db = FirebaseFirestore.getInstance()
 
         setupToolbar()
         loadUserData()
@@ -35,22 +28,29 @@ class CustomerProfileActivity : AppCompatActivity() {
     }
 
     private fun loadUserData() {
-        val userId = auth.currentUser?.uid ?: return
-        db.collection("users").document(userId)
-            .get()
-            .addOnSuccessListener { document ->
-                if (document != null) {
-                    // Check if user was previously a seller
-                    val wasSeller = document.getBoolean("switchedFromSeller") ?: false
-                    if (wasSeller) {
+        val userId = SupabaseManager.getCurrentUserId() ?: return
+        
+        SupabaseManager.getUserProfile(userId, object : SupabaseManager.SupabaseCallbackWithProfile {
+            override fun onResult(success: Boolean, profile: SupabaseManager.Profile?, error: String?) {
+                if (success && profile != null) {
+                    // In your previous Firebase logic, you checked "switchedFromSeller".
+                    // Assuming account_type is stored in Supabase Profile.
+                    // If the user is currently in CustomerProfileActivity, they are a customer.
+                    // We check if they have a shop_name or other seller fields to decide if they can switch back.
+                    val isPotentiallySeller = profile.account_type == "seller" || !profile.shop_name.isNullOrEmpty()
+                    
+                    if (isPotentiallySeller) {
                         binding.btnSwitchToSeller.visibility = View.VISIBLE
                         binding.tvSwitchToSellerInfo.visibility = View.VISIBLE
                     } else {
                         binding.btnSwitchToSeller.visibility = View.GONE
                         binding.tvSwitchToSellerInfo.visibility = View.GONE
                     }
+                } else if (error != null) {
+                    Toast.makeText(this@CustomerProfileActivity, "Error loading profile: $error", Toast.LENGTH_SHORT).show()
                 }
             }
+        })
     }
 
     private fun setupButtons() {
@@ -65,11 +65,18 @@ class CustomerProfileActivity : AppCompatActivity() {
         }
 
         binding.btnLogout.setOnClickListener {
-            auth.signOut()
-            val intent = Intent(this, LoginActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-            finish()
+            SupabaseManager.signOut(object : SupabaseManager.SupabaseCallback {
+                override fun onResult(success: Boolean, error: String?) {
+                    if (success) {
+                        val intent = Intent(this@CustomerProfileActivity, LoginActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        startActivity(intent)
+                        finish()
+                    } else {
+                        Toast.makeText(this@CustomerProfileActivity, "Sign out failed: $error", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            })
         }
 
         binding.btnSwitchToSeller.setOnClickListener {
@@ -89,27 +96,24 @@ class CustomerProfileActivity : AppCompatActivity() {
     }
 
     private fun switchToSellerMode() {
-        val userId = auth.currentUser?.uid ?: return
-        val userEmail = auth.currentUser?.email ?: return
+        val userId = SupabaseManager.getCurrentUserId() ?: return
+        val userSession = SupabaseManager.getCurrentSession()
+        val userEmail = userSession?.user?.email ?: ""
 
-        // Get the seller data from the sellers collection
-        db.collection("sellers").document(userId)
-            .get()
-            .addOnSuccessListener { sellerDoc ->
-                if (sellerDoc != null && sellerDoc.exists()) {
+        SupabaseManager.getUserProfile(userId, object : SupabaseManager.SupabaseCallbackWithProfile {
+            override fun onResult(success: Boolean, profile: SupabaseManager.Profile?, error: String?) {
+                if (success && profile != null) {
                     // Start the seller main activity
-                    val intent = Intent(this, SellerMainActivity::class.java)
+                    val intent = Intent(this@CustomerProfileActivity, SellerMainActivity::class.java)
                     intent.putExtra("accountType", "seller")
                     intent.putExtra("email", userEmail)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
                     finish()
                 } else {
-                    Toast.makeText(this, "Seller account not found", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@CustomerProfileActivity, "Seller profile not found: $error", Toast.LENGTH_SHORT).show()
                 }
             }
-            .addOnFailureListener { e ->
-                Toast.makeText(this, "Failed to switch to seller mode: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+        })
     }
-} 
+}

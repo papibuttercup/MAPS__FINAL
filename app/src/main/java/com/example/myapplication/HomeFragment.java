@@ -11,8 +11,6 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,28 +18,28 @@ public class HomeFragment extends Fragment implements ThriftShopAdapter.OnShopCl
     private RecyclerView recyclerShops;
     private ThriftShopAdapter adapter;
     private List<ThriftShop> shopList;
-    private FirebaseFirestore db;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_home, container, false);
         
-        // Initialize Firestore
-        db = FirebaseFirestore.getInstance();
-
         // Chat icon click listener
         View chatIcon = view.findViewById(R.id.message_icon);
-        chatIcon.setOnClickListener(v -> {
-            Intent intent = new Intent(getActivity(), CustomerChatListActivity.class);
-            startActivity(intent);
-        });
+        if (chatIcon != null) {
+            chatIcon.setOnClickListener(v -> {
+                Intent intent = new Intent(getActivity(), CustomerChatListActivity.class);
+                startActivity(intent);
+            });
+        }
 
         // Cart icon click listener
         View cartIcon = view.findViewById(R.id.cart_icon);
-        cartIcon.setOnClickListener(v -> {
-            Intent intent = new Intent(getActivity(), CartActivity.class);
-            startActivity(intent);
-        });
+        if (cartIcon != null) {
+            cartIcon.setOnClickListener(v -> {
+                Intent intent = new Intent(getActivity(), CartActivity.class);
+                startActivity(intent);
+            });
+        }
 
         // Initialize RecyclerView for thrift shops
         recyclerShops = view.findViewById(R.id.recyclerShops);
@@ -59,55 +57,64 @@ public class HomeFragment extends Fragment implements ThriftShopAdapter.OnShopCl
     }
 
     private void loadThriftShops() {
-        db.collection("sellers")
-            .get()
-            .addOnSuccessListener(queryDocumentSnapshots -> {
-                shopList.clear();
-                for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
-                    ThriftShop shop = new ThriftShop();
-                    shop.setId(document.getId());
-                    shop.setName(document.getString("shopName"));
-                    shop.setType("Thrift Shop");
-                    // Use shopLocation or locationName if available
-                    String shopLocation = document.getString("shopLocation");
-                    String locationName = document.getString("locationName");
-                    if (shopLocation != null && !shopLocation.isEmpty()) {
-                        shop.setLocation(shopLocation);
-                    } else if (locationName != null && !locationName.isEmpty()) {
-                        shop.setLocation(locationName);
-                    } else {
-                        shop.setLocation("");
+        SupabaseManager.getAllProfiles(new SupabaseManager.SupabaseCallbackWithProfiles() {
+            @Override
+            public void onResult(boolean success, List<SupabaseManager.Profile> profiles, String error) {
+                if (!isAdded()) return;
+
+                if (success && profiles != null) {
+                    shopList.clear();
+                    for (SupabaseManager.Profile profile : profiles) {
+                        if ("seller".equals(profile.getAccount_type())) {
+                            // Filter out "empty" shops (unnamed and no description/location)
+                            String shopName = profile.getShop_name();
+                            String shopDesc = profile.getShop_description();
+                            String shopLoc = profile.getShop_location();
+                            
+                            if ((shopName == null || shopName.isEmpty()) && 
+                                (shopDesc == null || shopDesc.isEmpty()) &&
+                                (shopLoc == null || shopLoc.isEmpty())) {
+                                continue; // Skip incomplete/stray profiles
+                            }
+
+                            ThriftShop shop = new ThriftShop();
+                            shop.setId(profile.getId());
+                            shop.setName(profile.getShop_name() != null && !profile.getShop_name().isEmpty() ? profile.getShop_name() : "Unnamed Shop");
+                            shop.setType("Thrift Shop");
+                            
+                            // Use description for subtitle if available
+                            String desc = profile.getShop_description();
+                            if (desc == null || desc.isEmpty()) {
+                                desc = "No description";
+                            }
+                            shop.setLocation(desc);
+
+                            // Set cover photo from shop_location (which stores the URL)
+                            String coverUrl = profile.getShop_location();
+                            if (coverUrl != null && (coverUrl.startsWith("http") || coverUrl.contains("storage"))) {
+                                shop.setCoverPhotoUri(coverUrl);
+                            } else {
+                                shop.setCoverPhotoUri(null);
+                            }
+                            
+                            shop.setLatitude(0.0);
+                            shop.setLongitude(0.0);
+                            shop.setDescription(desc);
+                            shopList.add(shop);
+                        }
                     }
-                    shop.setCoverPhotoUri(document.getString("coverPhotoUrl"));
-                    // Handle potential null values for coordinates
-                    Double latitude = document.getDouble("latitude");
-                    Double longitude = document.getDouble("longitude");
-                    if (latitude != null && longitude != null) {
-                        shop.setLatitude(latitude);
-                        shop.setLongitude(longitude);
-                    }
-                    shop.setDescription(document.getString("description"));
-                    shopList.add(shop);
-                }
-                if (adapter != null) {
                     adapter.notifyDataSetChanged();
-                }
-                if (getContext() != null) {
+                    
                     if (shopList.isEmpty()) {
-                        Toast.makeText(getContext(), "No thrift shops found in Baguio", 
-                                     Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), "No thrift shops found", Toast.LENGTH_SHORT).show();
                     } else {
-                        Toast.makeText(getContext(), "Found " + shopList.size() + " thrift shops in Baguio", 
-                                     Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), "Found " + shopList.size() + " thrift shops", Toast.LENGTH_SHORT).show();
                     }
+                } else {
+                    Toast.makeText(getContext(), "Error loading shops: " + error, Toast.LENGTH_SHORT).show();
                 }
-            })
-            .addOnFailureListener(e -> {
-                if (getContext() != null) {
-                    Toast.makeText(getContext(), "Error loading shops: " + e.getMessage(), 
-                                 Toast.LENGTH_SHORT).show();
-                }
-            });
+            }
+        });
     }
 
     @Override
@@ -116,7 +123,7 @@ public class HomeFragment extends Fragment implements ThriftShopAdapter.OnShopCl
         ShopProductsFragment fragment = ShopProductsFragment.newInstance(shop.getId(), shop.getName());
         requireActivity().getSupportFragmentManager()
             .beginTransaction()
-            .replace(R.id.fragment_container, fragment) // Make sure this is your main container ID
+            .replace(R.id.fragment_container, fragment)
             .addToBackStack(null)
             .commit();
     }
@@ -135,4 +142,4 @@ public class HomeFragment extends Fragment implements ThriftShopAdapter.OnShopCl
         intent.putExtra("shopName", shop.getName());
         startActivity(intent);
     }
-} 
+}

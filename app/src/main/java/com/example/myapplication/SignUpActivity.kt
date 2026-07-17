@@ -6,27 +6,17 @@ import android.util.Patterns
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.myapplication.databinding.ActivitySignupBinding
-import com.google.firebase.FirebaseApp
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.ktx.Firebase
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.builtin.Email
 
 class SignUpActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySignupBinding
-    private lateinit var mAuth: FirebaseAuth
-    private lateinit var db: FirebaseFirestore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySignupBinding.inflate(layoutInflater)
         setContentView(binding.root)
         supportActionBar?.hide()
-
-        // Initialize Firebase
-        FirebaseApp.initializeApp(this)
-        mAuth = Firebase.auth
-        db = FirebaseFirestore.getInstance()
 
         setupClickListeners()
     }
@@ -94,49 +84,27 @@ class SignUpActivity : AppCompatActivity() {
     }
 
     private fun createAccount() {
-        val email = binding.emailEditText.text.toString()
-        val password = binding.passwordEditText.text.toString()
+        val email = binding.emailEditText.text.toString().trim()
+        val password = binding.passwordEditText.text.toString().trim()
+        val firstName = binding.firstNameEditText.text.toString().trim()
+        val lastName = binding.lastNameEditText.text.toString().trim()
 
-        // Create user account with Firebase Authentication
-        mAuth.createUserWithEmailAndPassword(email, password)
-            .addOnCompleteListener(this) { task ->
-                if (task.isSuccessful) {
-                    // User account created successfully
-                    val userId = mAuth.currentUser?.uid
-                    if (userId != null) {
-                        saveUserToFirestore(userId)
-                    } else {
-                        Toast.makeText(this, "Error: User ID is null", Toast.LENGTH_SHORT).show()
-                    }
-                } else {
-                    // If account creation fails, display a message to the user.
-                    Toast.makeText(this, "Account creation failed: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-    }
-
-    private fun saveUserToFirestore(userId: String) {
-        val userData = mapOf(
-            "firstName" to binding.firstNameEditText.text.toString(),
-            "lastName" to binding.lastNameEditText.text.toString(),
-            "email" to binding.emailEditText.text.toString(),
-            "phone" to binding.phoneEditText.text.toString(),
-            "accountType" to "user", // Set account type to "user"
-            "createdAt" to System.currentTimeMillis()
+        val metadata = mapOf(
+            "first_name" to firstName,
+            "last_name" to lastName,
+            "account_type" to "customer"
         )
 
-        // Save user data to Firestore
-        db.collection("users").document(userId).set(userData)
-            .addOnSuccessListener {
-                Toast.makeText(this, "Account created successfully!", Toast.LENGTH_SHORT).show()
-                // Sign out the user to force them to log in
-                mAuth.signOut()
-                // Go to login screen
-                startActivity(Intent(this, LoginActivity::class.java))
-                finish()
+        SupabaseManager.signUp(email, password, metadata, object : SupabaseManager.SupabaseCallback {
+            override fun onResult(success: Boolean, error: String?) {
+                if (success) {
+                    Toast.makeText(this@SignUpActivity, "Account created successfully! Please check your email for verification.", Toast.LENGTH_LONG).show()
+                    startActivity(Intent(this@SignUpActivity, LoginActivity::class.java))
+                    finish()
+                } else {
+                    Toast.makeText(this@SignUpActivity, "Account creation failed: $error", Toast.LENGTH_LONG).show()
+                }
             }
-            .addOnFailureListener { e ->
-                Toast.makeText(this, "Error saving user: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+        })
     }
 }

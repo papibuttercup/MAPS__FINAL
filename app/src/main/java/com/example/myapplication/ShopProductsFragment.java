@@ -18,17 +18,16 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.List;
-import com.google.firebase.firestore.ListenerRegistration;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.graphics.Color;
 import androidx.core.content.ContextCompat;
 import com.google.android.material.tabs.TabLayout;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.stream.Collectors;
 
 public class ShopProductsFragment extends Fragment implements CategoryAdapter.OnCategoryClickListener {
     private static final String ARG_SELLER_ID = "sellerId";
@@ -44,12 +43,10 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
     private List<String> subCategories = new ArrayList<>();
     private List<Integer> subCategoryIcons = new ArrayList<>();
     private List<Product> products = new ArrayList<>();
-    private FirebaseFirestore db;
     private String selectedCategory = null;
     private TextView shopTitle;
     private Spinner mainCategorySpinner;
     private Button btnMessageShop;
-    private ListenerRegistration productListenerRegistration;
     private EditText etSearchInShop;
     private TextView txtShopRating, txtFollowersCount;
     private ImageView imgShopLogo;
@@ -78,7 +75,6 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
             sellerId = getArguments().getString(ARG_SELLER_ID);
             shopName = getArguments().getString(ARG_SHOP_NAME);
         }
-        db = FirebaseFirestore.getInstance();
 
         // Initialize Header & Shop Info
         view.findViewById(R.id.btnBack).setOnClickListener(v -> requireActivity().onBackPressed());
@@ -91,15 +87,24 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
         btnMessageShop = view.findViewById(R.id.btnMessageShop);
         btnFollowShop = view.findViewById(R.id.btnFollowShop);
 
+        String currentUserId = SupabaseManager.getCurrentUserId();
+        boolean isOwner = currentUserId != null && currentUserId.equals(sellerId);
+
+        if (isOwner) {
+            btnFollowShop.setVisibility(View.GONE);
+            btnMessageShop.setVisibility(View.GONE);
+        }
+
         // Action Buttons
         btnMessageShop.setOnClickListener(v -> {
-            String currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
             if (currentUserId != null && sellerId != null && !currentUserId.equals(sellerId)) {
                 Intent intent = new Intent(getActivity(), ChatActivity.class);
                 intent.putExtra("otherUserId", sellerId);
                 startActivity(intent);
             } else if (currentUserId != null && currentUserId.equals(sellerId)) {
                 Toast.makeText(getContext(), "You cannot message your own shop.", Toast.LENGTH_SHORT).show();
+            } else if (currentUserId == null) {
+                Toast.makeText(getContext(), "Please log in to message the shop.", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -155,6 +160,7 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
         // Product RecyclerView
         productRecyclerView = view.findViewById(R.id.productRecyclerView);
         productRecyclerView.setLayoutManager(new androidx.recyclerview.widget.GridLayoutManager(getContext(), 2));
+        
         productAdapter = new ProductListAdapter(getContext(), products, false);
         productAdapter.setOnProductClickListener(product -> {
             Intent intent = new Intent(getActivity(), ProductDetailsActivity.class);
@@ -194,41 +200,41 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
 
     private void loadSellerDetails() {
         if (sellerId == null) return;
-        db.collection("sellers").document(sellerId).get()
-            .addOnSuccessListener(doc -> {
-                if (doc.exists()) {
-                    String logoUrl = doc.getString("coverPhotoUrl");
-                    if (logoUrl != null && !logoUrl.isEmpty()) {
-                        com.bumptech.glide.Glide.with(this).load(logoUrl).into(imgShopLogo);
+        SupabaseManager.getUserProfile(sellerId, new SupabaseManager.SupabaseCallbackWithProfile() {
+            @Override
+            public void onResult(boolean success, SupabaseManager.Profile profile, String error) {
+                if (success && profile != null) {
+                    // Update Shop Name
+                    if (profile.getShop_name() != null && !profile.getShop_name().isEmpty()) {
+                        shopTitle.setText(profile.getShop_name());
                     }
-                    Double avgRating = doc.getDouble("averageRating");
-                    if (avgRating != null) {
-                        txtShopRating.setText(String.format("%.1f", avgRating));
-                    }
-                    Long followerCount = doc.getLong("followerCount");
-                    if (followerCount != null) {
-                        txtFollowersCount.setText(getString(R.string.followers_count_format, followerCount));
+
+                    // Use shop_location for the shop profile picture (circular)
+                    String profileUrl = profile.getShop_location();
+
+                    if (profileUrl != null && !profileUrl.isEmpty() && profileUrl.startsWith("http")) {
+                        if (getContext() != null) {
+                            com.bumptech.glide.Glide.with(ShopProductsFragment.this)
+                                .load(profileUrl)
+                                .placeholder(R.drawable.ic_account)
+                                .centerCrop()
+                                .into(imgShopLogo);
+                        }
                     } else {
-                        txtFollowersCount.setText(getString(R.string.followers_count_format, 0));
+                        imgShopLogo.setImageResource(R.drawable.ic_account);
+                        imgShopLogo.setBackgroundColor(Color.BLACK);
+                        imgShopLogo.setPadding(30, 30, 30, 30);
+                        imgShopLogo.setColorFilter(Color.WHITE);
                     }
                 }
-            });
+            }
+        });
 
-        checkFollowStatus();
+        // checkFollowStatus(); // TODO: Implement if needed for Supabase
     }
 
     private void checkFollowStatus() {
-        com.google.firebase.auth.FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (currentUser == null || sellerId == null) return;
-        String currentUserId = currentUser.getUid();
-
-        db.collection("users").document(currentUserId)
-            .collection("following").document(sellerId)
-            .get()
-            .addOnSuccessListener(doc -> {
-                isFollowing = doc.exists();
-                updateFollowButtonUI();
-            });
+        // TODO: Implement if needed for Supabase
     }
 
     private void updateFollowButtonUI() {
@@ -242,51 +248,7 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
     }
 
     private void toggleFollow() {
-        com.google.firebase.auth.FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        if (currentUser == null || sellerId == null) return;
-        String currentUserId = currentUser.getUid();
-        if (currentUserId.equals(sellerId)) {
-            Toast.makeText(getContext(), "You cannot follow your own shop.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        com.google.firebase.firestore.WriteBatch batch = db.batch();
-        com.google.firebase.firestore.DocumentReference sellerRef = db.collection("sellers").document(sellerId);
-        com.google.firebase.firestore.DocumentReference followerRef = sellerRef.collection("followers").document(currentUserId);
-        com.google.firebase.firestore.DocumentReference followingRef = db.collection("users").document(currentUserId)
-                .collection("following").document(sellerId);
-
-        if (isFollowing) {
-            // Unfollow
-            batch.delete(followerRef);
-            batch.delete(followingRef);
-            batch.update(sellerRef, "followerCount", com.google.firebase.firestore.FieldValue.increment(-1));
-        } else {
-            // Follow
-            java.util.Map<String, Object> data = new java.util.HashMap<>();
-            data.put("timestamp", System.currentTimeMillis());
-            batch.set(followerRef, data);
-            batch.set(followingRef, data);
-            batch.update(sellerRef, "followerCount", com.google.firebase.firestore.FieldValue.increment(1));
-        }
-
-        btnFollowShop.setEnabled(false);
-        batch.commit().addOnCompleteListener(task -> {
-            btnFollowShop.setEnabled(true);
-            if (task.isSuccessful()) {
-                isFollowing = !isFollowing;
-                updateFollowButtonUI();
-                // Optionally refresh follower count UI immediately
-                db.collection("sellers").document(sellerId).get().addOnSuccessListener(doc -> {
-                    if (doc.exists()) {
-                        Long count = doc.getLong("followerCount");
-                        txtFollowersCount.setText(getString(R.string.followers_count_format, (count != null ? count : 0)));
-                    }
-                });
-            } else {
-                Toast.makeText(getContext(), "Action failed: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
+        // TODO: Implement if needed for Supabase
     }
 
     private void updateSort(String order) {
@@ -333,30 +295,47 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
     private void loadAllProductsForSeller() {
         if (sellerId == null) return;
 
-        if (productListenerRegistration != null) {
-            productListenerRegistration.remove();
-        }
+        SupabaseManager.getProductsForSeller(sellerId, new SupabaseManager.SupabaseCallbackWithProducts() {
+            @Override
+            public void onResult(boolean success, List<SupabaseManager.ProductModel> productModels, String error) {
+                if (success && productModels != null) {
+                    allProducts.clear();
+                    for (SupabaseManager.ProductModel sp : productModels) {
+                        Product p = new Product();
+                        p.id = sp.getId();
+                        p.name = sp.getName();
+                        p.price = sp.getPrice();
+                        p.stock = (long) sp.getStock();
+                        p.coverPhotoUri = sp.getCover_photo_url();
+                        p.sellerId = sellerId;
+                        p.description = sp.getDescription();
+                        p.mainCategory = sp.getMain_category();
+                        p.category = sp.getCategory();
+                        p.colors = sp.getColors();
+                        p.sizes = sp.getSizes();
+                        p.isAvailable = sp.is_available();
 
-        productListenerRegistration = db.collection("products")
-            .whereEqualTo("sellerId", sellerId)
-            .addSnapshotListener((queryDocumentSnapshots, error) -> {
-                if (error != null) {
-                    Toast.makeText(getContext(), "Error loading products: " + error.getMessage(), Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                allProducts.clear();
-                if (queryDocumentSnapshots != null) {
-                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                        Product product = doc.toObject(Product.class);
-                        if (product != null) {
-                            product.id = doc.getId();
-                            allProducts.add(product);
+                        // Parse createdAt
+                        if (sp.getCreated_at() != null) {
+                            try {
+                                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault());
+                                java.util.Date date = sdf.parse(sp.getCreated_at());
+                                if (date != null) p.createdAt = date.getTime();
+                            } catch (Exception e) {
+                                android.util.Log.e("ShopProductsFragment", "Error parsing date: " + sp.getCreated_at());
+                            }
                         }
+
+                        allProducts.add(p);
+                    }
+                    applyFiltersAndSort();
+                } else {
+                    if (getContext() != null) {
+                        Toast.makeText(getContext(), "Error loading products: " + error, Toast.LENGTH_LONG).show();
                     }
                 }
-                applyFiltersAndSort();
-            });
+            }
+        });
     }
 
     private void setupMainCategories() {
@@ -364,6 +343,7 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
         mainCategories.add("Women");
         mainCategories.add("Men");
         mainCategories.add("Kids");
+        mainCategories.add("Home");
     }
 
     private void loadSubCategories(String mainCategory) {
@@ -377,6 +357,8 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
             arrayId = R.array.categories_men;
         } else if (mainCategory.equals("Kids")) {
             arrayId = R.array.categories_kids;
+        } else if (mainCategory.equals("Home")) {
+            arrayId = R.array.categories_home;
         }
         if (arrayId != 0) {
             String[] subcats = res.getStringArray(arrayId);
@@ -412,7 +394,7 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
                     subCategoryIcons.add(R.drawable.women_top);
                 } else if (mainCategory.equals("Women") && subcat.equals("T-Shirts")) {
                     subCategoryIcons.add(R.drawable.women_tshirt);
-                } else if (mainCategory.equals("Women") && subcat.equals("Dress")) {
+                } else if (mainCategory.equals("Women") && subcat.equals("Dresses")) {
                     subCategoryIcons.add(R.drawable.women_dress);
                 } else if (mainCategory.equals("Women") && subcat.equals("Suits")) {
                     subCategoryIcons.add(R.drawable.women_suit);
@@ -444,7 +426,7 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
                     subCategoryIcons.add(R.drawable.kid_jacket);
                 } else if (mainCategory.equals("Kids") && subcat.equals("T-Shirts")) {
                     subCategoryIcons.add(R.drawable.kid_tshirt);
-                } else if (mainCategory.equals("Kids") && (subcat.equals("Dress") || subcat.equals("Dresses"))) {
+                } else if (mainCategory.equals("Kids") && (subcat.equals("Dresses"))) {
                     subCategoryIcons.add(R.drawable.kid_dress);
                 } else if (mainCategory.equals("Kids") && subcat.equals("Sweaters")) {
                     subCategoryIcons.add(R.drawable.kid_sweater);
@@ -480,19 +462,7 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
     }
 
     private void loadProductsForCategory() {
-        db.collection("products")
-            .whereEqualTo("sellerId", sellerId)
-            .whereEqualTo("category", selectedCategory)
-            .get()
-            .addOnSuccessListener(queryDocumentSnapshots -> {
-                products.clear();
-                for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                    Product product = doc.toObject(Product.class);
-                    product.id = doc.getId();
-                    products.add(product);
-                }
-                productAdapter.notifyDataSetChanged();
-            });
+        applyFiltersAndSort();
     }
 
 
@@ -503,11 +473,13 @@ public class ShopProductsFragment extends Fragment implements CategoryAdapter.On
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        loadAllProductsForSeller();
+    }
+
+    @Override
     public void onDestroyView() {
         super.onDestroyView();
-        // Remove the snapshot listener when the view is destroyed
-        if (productListenerRegistration != null) {
-            productListenerRegistration.remove();
-        }
     }
 } 

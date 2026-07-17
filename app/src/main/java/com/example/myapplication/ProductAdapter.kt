@@ -3,28 +3,18 @@ package com.example.myapplication
 import android.app.AlertDialog
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.myapplication.databinding.ItemProductBinding
-import com.google.firebase.firestore.FirebaseFirestore
 
-// Data class for SellerProduct
-// Renamed from Product to avoid conflict with Product.java
+// Data class for ProductModel was moved to SupabaseManager.kt
 
-data class SellerProduct(
-    val id: String = "",
-    val name: String = "",
-    val price: Double = 0.0,
-    val stock: Int = 0,
-    val imageUrl: String = "",
-    val status: String = ""
-)
-
-class ProductAdapter(private val products: List<SellerProduct>, private val isSeller: Boolean = false) :
+class ProductAdapter(private val products: List<SupabaseManager.ProductModel>, private val isSeller: Boolean = false) :
     RecyclerView.Adapter<ProductAdapter.ProductViewHolder>() {
 
     interface OnEditProductListener {
-        fun onEditProduct(product: SellerProduct)
+        fun onEditProduct(product: SupabaseManager.ProductModel)
     }
     private var editListener: OnEditProductListener? = null
     fun setOnEditProductListener(listener: OnEditProductListener) {
@@ -43,10 +33,12 @@ class ProductAdapter(private val products: List<SellerProduct>, private val isSe
         holder.binding.txtProductName.text = product.name
         holder.binding.txtProductPrice.text = "₱${product.price}"
         holder.binding.textProductStock.text = "Stock: ${product.stock}"
+        
         Glide.with(holder.itemView.context)
-            .load(product.imageUrl)
+            .load(product.cover_photo_url)
             .placeholder(R.drawable.placeholder_image)
             .into(holder.binding.imgProduct)
+
         if (isSeller) {
             holder.binding.btnEditProduct.visibility = android.view.View.VISIBLE
             holder.binding.btnEditProduct.setOnClickListener {
@@ -58,15 +50,27 @@ class ProductAdapter(private val products: List<SellerProduct>, private val isSe
                     .setTitle("Delete Product")
                     .setMessage("Are you sure you want to delete this product?")
                     .setPositiveButton("Delete") { _, _ ->
-                        FirebaseFirestore.getInstance().collection("products")
-                            .document(product.id)
-                            .delete()
-                            .addOnSuccessListener {
-                                (products as? MutableList<SellerProduct>)?.let {
-                                    it.removeAt(position)
-                                    notifyItemRemoved(position)
+                        val prodId = product.id ?: ""
+                        SupabaseManager.deleteProduct(prodId, object : SupabaseManager.SupabaseCallback {
+                            override fun onResult(success: Boolean, error: String?) {
+                                if (success) {
+                                    (holder.itemView.context as? android.app.Activity)?.runOnUiThread {
+                                        (products as? MutableList<SupabaseManager.ProductModel>)?.let {
+                                            val currentPos = holder.adapterPosition
+                                            if (currentPos != RecyclerView.NO_POSITION) {
+                                                it.removeAt(currentPos)
+                                                notifyItemRemoved(currentPos)
+                                            }
+                                        }
+                                        Toast.makeText(holder.itemView.context, "Product deleted", Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    (holder.itemView.context as? android.app.Activity)?.runOnUiThread {
+                                        Toast.makeText(holder.itemView.context, "Error: $error", Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                             }
+                        })
                     }
                     .setNegativeButton("Cancel", null)
                     .show()

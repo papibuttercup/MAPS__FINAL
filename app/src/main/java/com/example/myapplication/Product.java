@@ -1,6 +1,7 @@
 package com.example.myapplication;
 
 import java.util.List;
+import java.util.Map;
 
 public class Product {
     public String id;
@@ -20,6 +21,7 @@ public class Product {
     public String parcelSize;
     public List<String> colors;
     public List<String> sizes;
+    public Map<String, String> variationImages;
 
     public Product() {}
 } 

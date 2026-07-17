@@ -39,12 +39,13 @@ public class ThriftShopAdapter extends RecyclerView.Adapter<ThriftShopAdapter.Vi
         ThriftShop shop = shops.get(position);
         
         holder.tvShopName.setText(shop.getName());
-        holder.tvShopTypeLocation.setText(shop.getType() + " · " + shop.getLocation());
+        holder.tvShopTypeLocation.setText(shop.getType() + (shop.getLocation() != null && !shop.getLocation().isEmpty() ? " · " + shop.getLocation() : ""));
         
         // Load shop image using Glide
-        if (shop.getCoverPhotoUri() != null && !shop.getCoverPhotoUri().isEmpty()) {
+        String coverUri = shop.getCoverPhotoUri();
+        if (coverUri != null && !coverUri.isEmpty()) {
             Glide.with(context)
-                .load(shop.getCoverPhotoUri())
+                .load(coverUri)
                 .placeholder(R.drawable.ic_image_placeholder)
                 .error(R.drawable.ic_image_placeholder)
                 .centerCrop()

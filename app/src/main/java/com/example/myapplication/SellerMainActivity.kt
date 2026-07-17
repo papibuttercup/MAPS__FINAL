@@ -1,6 +1,8 @@
 package com.example.myapplication
 
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.example.myapplication.databinding.ActivitySellerMainBinding
@@ -58,11 +60,22 @@ class SellerMainActivity : AppCompatActivity() {
         val bottomSheetBinding = BottomSheetAccountBinding.inflate(layoutInflater)
         
         bottomSheetBinding.logoutButton.setOnClickListener {
-            // Handle logout
-            bottomSheetDialog.dismiss()
+            SupabaseManager.signOut(object : SupabaseManager.SupabaseCallback {
+                override fun onResult(success: Boolean, error: String?) {
+                    if (success) {
+                        bottomSheetDialog.dismiss()
+                        val intent = Intent(this@SellerMainActivity, LoginActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        startActivity(intent)
+                        finish()
+                    } else {
+                        Toast.makeText(this@SellerMainActivity, "Logout failed: $error", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            })
         }
 
         bottomSheetDialog.setContentView(bottomSheetBinding.root)
         bottomSheetDialog.show()
     }
-} 
+}

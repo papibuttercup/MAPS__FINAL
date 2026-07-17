@@ -7,29 +7,31 @@ import android.view.View
 import android.util.Patterns
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.myapplication.databinding.ActivityLoginBinding
-import com.google.firebase.FirebaseApp
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.ktx.Firebase
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 
 class LoginActivity : AppCompatActivity() {
     private lateinit var binding: ActivityLoginBinding
-    private lateinit var auth: FirebaseAuth
-    private lateinit var firestore: FirebaseFirestore
     private val TAG = "LoginActivity"
+
+    @Serializable
+    data class Profile(
+        val id: String,
+        val email: String,
+        val account_type: String? = null,
+        val is_disabled: Boolean = false
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        FirebaseApp.initializeApp(this)
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
         supportActionBar?.hide()
-
-        // Initialize Firebase Auth
-        auth = Firebase.auth
-        firestore = FirebaseFirestore.getInstance()
 
         // Check if user is already logged in
         checkCurrentUser()
@@ -38,10 +40,11 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun checkCurrentUser() {
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            Log.d(TAG, "User already logged in: ${currentUser.email}")
-            checkAccountType(currentUser.email ?: "")
+        val session = SupabaseManager.client.auth.currentSessionOrNull()
+        if (session != null) {
+            val user = session.user
+            Log.d(TAG, "User already logged in: ${user?.email}")
+            checkAccountType(user?.email ?: "")
         }
     }
 
@@ -54,6 +57,14 @@ class LoginActivity : AppCompatActivity() {
             startActivity(Intent(this@LoginActivity, CreateSellerAccountActivity::class.java))
         }
         binding.forgotPassword.setOnClickListener { handleForgotPassword() }
+
+        // Hidden shortcut to auto-fill moderator credentials
+        binding.signInTitle.setOnLongClickListener {
+            binding.emailEditText.setText("moderator@thrifty.com")
+            binding.passwordEditText.setText("moderator123")
+            Toast.makeText(this, "Moderator credentials filled", Toast.LENGTH_SHORT).show()
+            true
+        }
     }
 
     private fun validateLoginForm(email: String, password: String): Boolean {
@@ -81,177 +92,110 @@ class LoginActivity : AppCompatActivity() {
     private fun handleLogin() {
         val email = binding.emailEditText.text.toString().trim()
         val password = binding.passwordEditText.text.toString().trim()
-        val rememberMe = binding.rememberMe.isChecked
 
         Log.d(TAG, "Attempting login for email: $email")
+
+        // Predefined moderator credentials for testing
+        if (email == "moderator@thrifty.com" && password == "moderator123") {
+            Log.d(TAG, "Predefined moderator login detected")
+            startActivity(Intent(this, ModeratorActivity::class.java))
+            finish()
+            return
+        }
 
         if (validateLoginForm(email, password)) {
             showLoading(true)
 
-            auth.signInWithEmailAndPassword(email, password)
-                .addOnCompleteListener { authTask ->
-                    if (authTask.isSuccessful) {
-                        Log.d(TAG, "Firebase Auth successful")
-                        checkAccountType(email)
-                    } else {
-                        showLoading(false)
-                        Log.e(TAG, "Firebase Auth failed", authTask.exception)
-                        Toast.makeText(
-                            this,
-                            "Authentication failed: ${authTask.exception?.message}",
-                            Toast.LENGTH_LONG
-                        ).show()
+            lifecycleScope.launch {
+                try {
+                    SupabaseManager.client.auth.signInWith(Email) {
+                        this.email = email
+                        this.password = password
                     }
+                    Log.d(TAG, "Supabase Auth successful")
+                    checkAccountType(email)
+                } catch (e: Exception) {
+                    showLoading(false)
+                    Log.e(TAG, "Supabase Auth failed", e)
+                    Toast.makeText(
+                        this@LoginActivity,
+                        "Authentication failed: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
+            }
         }
     }
 
     private fun checkAccountType(email: String) {
         Log.d(TAG, "Checking account type for: $email")
-        // First check if it's a seller account
-        firestore.collection("sellers")
-            .whereEqualTo("email", email)
-            .limit(1)
-            .get()
-            .addOnSuccessListener { sellerDocuments ->
-                Log.d(TAG, "Seller check result - Empty: ${sellerDocuments.isEmpty}")
-                if (!sellerDocuments.isEmpty) {
-                    val sellerDoc = sellerDocuments.documents[0]
-                    val verificationStatus = sellerDoc.getString("verificationStatus")
-                    val isDisabled = sellerDoc.getBoolean("isDisabled") ?: false
-                    Log.d(TAG, "Seller verification status: $verificationStatus, isDisabled: $isDisabled")
-                    
-                    if (isDisabled) {
-                        showLoading(false)
-                        Toast.makeText(
-                            this,
-                            "This account has been disabled. Please contact support for assistance.",
-                            Toast.LENGTH_LONG
-                        ).show()
-                        auth.signOut()
-                        return@addOnSuccessListener
-                    }
-                    
-                    when (verificationStatus) {
-                        "pending" -> {
-                            showLoading(false)
-                            Toast.makeText(
-                                this,
-                                "Your seller account is pending verification. Please wait for moderator approval.",
-                                Toast.LENGTH_LONG
-                            ).show()
-                            auth.signOut()
-                        }
-                        "approved" -> {
-                            Log.d(TAG, "Seller approved, proceeding to SellerMainActivity")
-                            val intent = Intent(this@LoginActivity, SellerMainActivity::class.java)
-                            intent.putExtra("accountType", "seller")
-                            intent.putExtra("email", email)
-                            startActivity(intent)
-                            finish()
-                        }
-                        "rejected" -> {
-                            showLoading(false)
-                            Toast.makeText(
-                                this,
-                                "Your seller account has been rejected. Please contact support for more information.",
-                                Toast.LENGTH_LONG
-                            ).show()
-                            auth.signOut()
-                        }
-                        else -> {
-                            Log.d(TAG, "No seller verification status found, checking regular user")
-                            checkRegularUser(email)
+        
+        lifecycleScope.launch {
+            try {
+                val profile = SupabaseManager.client.postgrest["profiles"]
+                    .select {
+                        filter {
+                            eq("email", email)
                         }
                     }
-                } else {
-                    Log.d(TAG, "No seller account found, checking regular user")
-                    // Not a seller account, check regular user
-                    checkRegularUser(email)
-                }
-            }
-            .addOnFailureListener { exception ->
-                showLoading(false)
-                Log.e(TAG, "Error checking seller account", exception)
-                Toast.makeText(
-                    this,
-                    "Error checking account type: ${exception.message}",
-                    Toast.LENGTH_LONG
-                ).show()
-                auth.signOut()
-            }
-    }
+                    .decodeSingleOrNull<Profile>()
 
-    private fun checkRegularUser(email: String) {
-        Log.d(TAG, "Checking regular user account for: $email")
-        firestore.collection("users")
-            .whereEqualTo("email", email)
-            .limit(1)
-            .get()
-            .addOnSuccessListener { documents ->
-                showLoading(false)
-                Log.d(TAG, "Regular user check result - Empty: ${documents.isEmpty}")
-                if (documents.isEmpty) {
-                    Log.e(TAG, "No user data found in Firestore")
+                if (profile == null) {
+                    showLoading(false)
+                    Log.e(TAG, "Profile not found for email: $email")
                     Toast.makeText(
-                        this,
-                        "No user data found",
+                        this@LoginActivity,
+                        "Profile not found. Please contact support.",
                         Toast.LENGTH_LONG
                     ).show()
-                    auth.signOut()
-                } else {
-                    val userDoc = documents.documents[0]
-                    val accountType = userDoc.getString("accountType") ?: "user"
-                    val isDisabled = userDoc.getBoolean("isDisabled") ?: false
-                    Log.d(TAG, "User account type: $accountType, isDisabled: $isDisabled")
+                    SupabaseManager.client.auth.signOut()
+                    return@launch
+                }
 
-                    if (isDisabled) {
-                        Log.d(TAG, "Account is disabled")
-                        Toast.makeText(
-                            this,
-                            "This account has been disabled. Please contact support for assistance.",
-                            Toast.LENGTH_LONG
-                        ).show()
-                        auth.signOut()
-                        return@addOnSuccessListener
+                showLoading(false)
+                Log.d(TAG, "Profile found: $profile")
+
+                if (profile.is_disabled) {
+                    Toast.makeText(
+                        this@LoginActivity,
+                        "This account has been disabled. Please contact support for assistance.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    SupabaseManager.client.auth.signOut()
+                    return@launch
+                }
+
+                when (profile.account_type) {
+                    "moderator" -> {
+                        startActivity(Intent(this@LoginActivity, ModeratorActivity::class.java))
+                        finish()
                     }
-
-                    when (accountType) {
-                        "moderator" -> {
-                            Log.d(TAG, "Redirecting to ModeratorActivity")
-                            val intent = Intent(this@LoginActivity, ModeratorActivity::class.java)
-                            startActivity(intent)
-                            finish()
-                        }
-                        "seller" -> {
-                            Log.d(TAG, "Redirecting to SellerMainActivity")
-                            val intent = Intent(this@LoginActivity, SellerMainActivity::class.java)
-                            intent.putExtra("accountType", "seller")
-                            intent.putExtra("email", email)
-                            startActivity(intent)
-                            finish()
-                        }
-                        else -> {
-                            Log.d(TAG, "Redirecting to LandingActivity as regular user")
-                            val intent = Intent(this@LoginActivity, LandingActivity::class.java)
-                            intent.putExtra("accountType", accountType)
-                            intent.putExtra("email", email)
-                            startActivity(intent)
-                            finish()
-                        }
+                    "seller" -> {
+                        val intent = Intent(this@LoginActivity, SellerMainActivity::class.java)
+                        intent.putExtra("accountType", "seller")
+                        intent.putExtra("email", email)
+                        startActivity(intent)
+                        finish()
+                    }
+                    else -> {
+                        val intent = Intent(this@LoginActivity, LandingActivity::class.java)
+                        intent.putExtra("accountType", profile.account_type)
+                        intent.putExtra("email", email)
+                        startActivity(intent)
+                        finish()
                     }
                 }
-            }
-            .addOnFailureListener { exception ->
+            } catch (e: Exception) {
                 showLoading(false)
-                Log.e(TAG, "Error checking regular user account", exception)
+                Log.e(TAG, "Error checking profile", e)
                 Toast.makeText(
-                    this,
-                    "Error checking account type: ${exception.message}",
+                    this@LoginActivity,
+                    "Error checking account type: ${e.message}",
                     Toast.LENGTH_LONG
                 ).show()
-                auth.signOut()
+                SupabaseManager.client.auth.signOut()
             }
+        }
     }
 
     private fun showLoading(show: Boolean) {

@@ -2,46 +2,50 @@ package com.example.myapplication
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.example.myapplication.databinding.ActivitySellerAccountBinding
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.StorageReference
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.maplibre.android.MapLibre
-import org.maplibre.android.maps.MapView
-import org.maplibre.android.maps.MapLibreMap
-import org.maplibre.android.maps.Style
-import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.annotations.MarkerOptions
-import android.util.Log
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.MapView
+import org.maplibre.android.maps.Style
+import java.io.File
+import java.io.FileOutputStream
+import java.util.UUID
 
 class SellerAccountActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySellerAccountBinding
-    private lateinit var db: FirebaseFirestore
-    private lateinit var auth: FirebaseAuth
-    private var shopDocId: String? = null
     private var coverPhotoUri: Uri? = null
-    private var coverPhotoUrl: String? = null
     private val PICK_COVER_PHOTO_REQUEST = 101
+    private val PICK_LOCATION_REQUEST = 200
     private var miniMapView: MapView? = null
-    private var miniMapLibreMap: MapLibreMap? = null
     private var progressDialog: AlertDialog? = null
+    private var currentProfile: SupabaseManager.Profile? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         MapLibre.getInstance(this)
         binding = ActivitySellerAccountBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        db = FirebaseFirestore.getInstance()
-        auth = FirebaseAuth.getInstance()
 
         miniMapView = binding.miniMapView
         miniMapView?.onCreate(savedInstanceState)
@@ -52,417 +56,313 @@ class SellerAccountActivity : AppCompatActivity() {
     }
 
     private fun setupToolbar() {
-        binding.toolbar.setNavigationOnClickListener {
-            finish()
-        }
+        binding.backButton.setOnClickListener { finish() }
+        binding.toolbar.setNavigationOnClickListener { finish() }
     }
 
     private fun loadUserData() {
-        val userId = auth.currentUser?.uid ?: return
-        db.collection("sellers").document(userId)
-            .get()
-            .addOnSuccessListener { document ->
-                if (document != null) {
-                    // Set shop name
-                    val shopName = document.getString("shopName") ?: ""
-                    binding.etShopName.setText(shopName)
+        val userId = SupabaseManager.getCurrentUserId() ?: return
+        
+        SupabaseManager.getUserProfile(userId, object : SupabaseManager.SupabaseCallbackWithProfile {
+            override fun onResult(success: Boolean, profile: SupabaseManager.Profile?, error: String?) {
+                lifecycleScope.launch {
+                    if (profile != null) {
+                        currentProfile = profile
+                        
+                        binding.tvShopName.text = profile.shop_name ?: "Shop Name"
+                        binding.etShopName.setText(profile.shop_name ?: "")
+                        
+                        binding.tvShopDescription.text = profile.shop_description ?: "No description set"
+                        binding.etShopDescription.setText(profile.shop_description ?: "")
+                        
+                        if (!profile.shop_location.isNullOrEmpty() && profile.shop_location.startsWith("http")) {
+                            binding.tvNoCover.visibility = View.GONE
+                            Glide.with(this@SellerAccountActivity)
+                                .load(profile.shop_location)
+                                .placeholder(R.drawable.ic_image_placeholder)
+                                .into(binding.ivCoverPhoto)
+                        } else {
+                            binding.tvNoCover.visibility = View.VISIBLE
+                            binding.ivCoverPhoto.setImageResource(R.drawable.ic_image_placeholder)
+                        }
 
-                    // Set shop description
-                    val shopDescription = document.getString("shopDescription") ?: ""
-                    binding.etShopDescription.setText(shopDescription)
-
-                    // Set cover photo if available
-                    coverPhotoUrl = document.getString("coverPhotoUrl")
-                    if (!coverPhotoUrl.isNullOrEmpty()) {
-                        Glide.with(this)
-                            .load(coverPhotoUrl)
-                            .placeholder(R.drawable.ic_add_photo)
-                            .error(R.drawable.ic_add_photo)
-                            .into(binding.ivCoverPhoto)
-                        binding.btnDeleteCoverPhoto.visibility = android.view.View.VISIBLE
-                        binding.btnSetCoverPhoto.text = "Change Cover Photo"
-                    } else {
-                        binding.ivCoverPhoto.setImageResource(R.drawable.ic_add_photo)
-                        binding.btnDeleteCoverPhoto.visibility = android.view.View.GONE
-                        binding.btnSetCoverPhoto.text = "Set Cover Photo"
+                        loadStats(userId)
+                        loadLocationData(userId)
+                    } else if (error != null) {
+                        Log.e("SellerAccount", "Failed to load user data: $error")
                     }
-
-                    // Set current location if available
-                    val latitude = document.getDouble("latitude")
-                    val longitude = document.getDouble("longitude")
-                    val locationName = document.getString("locationName") ?: "Unknown Location"
-                    if (latitude != null && longitude != null) {
-                        binding.tvCurrentLocation.text = "$locationName (Location set)"
-                        binding.btnDeleteLocation.visibility = android.view.View.VISIBLE
-                        binding.btnIdentifyLocation.visibility = android.view.View.GONE
-                        binding.miniMapView.visibility = android.view.View.VISIBLE
-                        showMiniMapLibrePreview(latitude, longitude)
-                    } else {
-                        binding.tvCurrentLocation.text = "No location set"
-                        binding.btnDeleteLocation.visibility = android.view.View.GONE
-                        binding.btnIdentifyLocation.visibility = android.view.View.VISIBLE
-                        binding.miniMapView.visibility = android.view.View.GONE
-                    }
-
-                    shopDocId = document.id
                 }
             }
-            .addOnFailureListener { e ->
-                Log.e("SellerAccount", "Failed to load user data: ${e.message}")
-                Toast.makeText(this, "Failed to load profile data: ${e.message}", Toast.LENGTH_SHORT).show()
+        })
+    }
+
+    private fun loadStats(userId: String) {
+        lifecycleScope.launch {
+            try {
+                val products = SupabaseManager.client.postgrest["products"]
+                    .select { filter { eq("seller_id", userId) } }
+                    .decodeList<SupabaseManager.ProductModel>()
+                
+                val activeOrders = SupabaseManager.client.postgrest["orders"]
+                    .select {
+                        filter {
+                            eq("seller_id", userId)
+                            or {
+                                eq("status", "pending")
+                                eq("status", "accepted")
+                            }
+                        }
+                    }
+                    .decodeList<SupabaseManager.Order>()
+
+                binding.tvProductsCount.text = products.size.toString()
+                binding.tvActiveOrdersCount.text = activeOrders.size.toString()
+            } catch (e: Exception) {
+                Log.e("SellerAccount", "Failed to load stats: ${e.message}")
             }
+        }
+    }
+
+    private fun loadLocationData(userId: String) {
+        lifecycleScope.launch {
+            try {
+                val markers = SupabaseManager.client.postgrest["seller_markers"]
+                    .select { filter { eq("seller_id", userId) } }
+                    .decodeList<SupabaseManager.SellerMarker>()
+
+                if (markers.isNotEmpty()) {
+                    val marker = markers[0]
+                    binding.tvCurrentLocation.text = "Location set: ${marker.latitude}, ${marker.longitude}"
+                    showMiniMapLibrePreview(marker.latitude, marker.longitude)
+                } else {
+                    binding.tvCurrentLocation.text = "Not set · buyers can't estimate delivery"
+                    binding.miniMapView.visibility = View.GONE
+                }
+            } catch (e: Exception) {
+                Log.e("SellerAccount", "Failed to load location: ${e.message}")
+            }
+        }
     }
 
     private fun setupButtons() {
-        binding.backButton.setOnClickListener { finish() }
+        binding.btnToggleEdit.setOnClickListener { toggleEditMode(true) }
+        binding.btnCancelEdit.setOnClickListener { toggleEditMode(false) }
+        binding.btnSaveInline.setOnClickListener { saveProfileInline() }
 
-        // Shop Location Button
         binding.btnIdentifyLocation.setOnClickListener {
-            val intent = Intent(this, Maps::class.java)
-            intent.putExtra("locationName", "Shop Location")
-            startActivityForResult(intent, 200)
+            startActivityForResult(Intent(this, Maps::class.java).putExtra("mode", "pick_location"), PICK_LOCATION_REQUEST)
         }
 
-        // Set Cover Photo Button - Always enabled
-        binding.btnSetCoverPhoto.isEnabled = true
         binding.btnSetCoverPhoto.setOnClickListener {
-            val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-            startActivityForResult(intent, PICK_COVER_PHOTO_REQUEST)
+            startActivityForResult(Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI), PICK_COVER_PHOTO_REQUEST)
         }
 
-        // Save Button
-        binding.btnSave.setOnClickListener {
-            saveShopProfile()
-        }
+        binding.btnChangePassword.setOnClickListener { showChangePasswordDialog() }
 
-        // Delete Cover Photo Button
-        binding.btnDeleteCoverPhoto.setOnClickListener {
-            val userId = auth.currentUser?.uid ?: return@setOnClickListener
-            showProgressDialog("Deleting cover photo...")
-
-            // Delete from Firestore
-            db.collection("sellers").document(userId)
-                .update("coverPhotoUrl", null)
-                .addOnSuccessListener {
-                    // Delete from Storage if URL exists
-                    if (!coverPhotoUrl.isNullOrEmpty()) {
-                        val storageRef = FirebaseStorage.getInstance().getReferenceFromUrl(coverPhotoUrl!!)
-                        storageRef.delete()
-                            .addOnSuccessListener {
-                                hideProgressDialog()
-                                binding.ivCoverPhoto.setImageResource(R.drawable.ic_add_photo)
-                                binding.btnDeleteCoverPhoto.visibility = android.view.View.GONE
-                                binding.btnSetCoverPhoto.text = "Set Photo"
-                                binding.btnSave.visibility = android.view.View.GONE
-                                coverPhotoUrl = null
-                                Toast.makeText(this, "Cover photo deleted successfully", Toast.LENGTH_SHORT).show()
-                            }
-                            .addOnFailureListener {
-                                hideProgressDialog()
-                                Toast.makeText(this, "Failed to delete cover photo from storage", Toast.LENGTH_SHORT).show()
-                            }
-                    } else {
-                        hideProgressDialog()
-                        binding.ivCoverPhoto.setImageResource(R.drawable.ic_add_photo)
-                        binding.btnDeleteCoverPhoto.visibility = android.view.View.GONE
-                        binding.btnSetCoverPhoto.text = "Set Photo"
-                        binding.btnSave.visibility = android.view.View.GONE
-                        coverPhotoUrl = null
-                        Toast.makeText(this, "Cover photo deleted successfully", Toast.LENGTH_SHORT).show()
-                    }
-                }
-                .addOnFailureListener {
-                    hideProgressDialog()
-                    Toast.makeText(this, "Failed to delete cover photo", Toast.LENGTH_SHORT).show()
-                }
-        }
-
-        // Logout Button
         binding.btnLogout.setOnClickListener {
-            auth.signOut()
-            val intent = Intent(this, LoginActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-            finish()
-        }
-
-        // Switch to Customer Mode Button
-        binding.btnSwitchToCustomer.setOnClickListener {
-            showSwitchToCustomerConfirmation()
-        }
-
-        // Delete Location Button
-        binding.btnDeleteLocation.setOnClickListener {
-            val userId = auth.currentUser?.uid ?: return@setOnClickListener
-            showProgressDialog("Deleting location...")
-            
-            db.collection("sellers").document(userId)
-                .update(
-                    mapOf(
-                        "latitude" to null,
-                        "longitude" to null,
-                        "locationName" to null
-                    )
-                )
-                .addOnSuccessListener {
-                    hideProgressDialog()
-                    binding.tvCurrentLocation.text = "No location set"
-                    binding.btnDeleteLocation.visibility = android.view.View.GONE
-                    binding.btnIdentifyLocation.visibility = android.view.View.VISIBLE
-                    binding.miniMapView.visibility = android.view.View.GONE
-                    Toast.makeText(this, "Location deleted successfully", Toast.LENGTH_SHORT).show()
-                }
-                .addOnFailureListener { e ->
-                    hideProgressDialog()
-                    Toast.makeText(this, "Failed to delete location: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-        }
-    }
-
-    private fun showMiniMapLibrePreview(latitude: Double, longitude: Double) {
-        Log.d("MiniMapDebug", "showMiniMapLibrePreview called with lat=$latitude, lon=$longitude")
-        binding.miniMapView.visibility = android.view.View.VISIBLE
-        miniMapView?.onResume() // Ensure the map is resumed when shown
-        val mapTilerApiKey = getString(R.string.maptiler_api_key)
-        val styleUrl = "https://api.maptiler.com/maps/streets/style.json?key=$mapTilerApiKey"
-        miniMapView?.getMapAsync { map ->
-            miniMapLibreMap = map
-            map.setStyle(Style.Builder().fromUri(styleUrl)) { style ->
-                // Clear any existing markers
-                map.markers.forEach { map.removeMarker(it) }
-                // Add new marker
-                val location = LatLng(latitude, longitude)
-                map.addMarker(MarkerOptions()
-                    .position(location)
-                    .title("Shop Location"))
-                // Set camera position with animation
-                map.animateCamera(
-                    org.maplibre.android.camera.CameraUpdateFactory.newLatLngZoom(
-                        location,
-                        15.0
-                    ),
-                    1000
-                )
-                Log.d("MiniMapDebug", "Marker added and camera animated")
+            lifecycleScope.launch {
+                SupabaseManager.client.auth.signOut()
+                startActivity(Intent(this@SellerAccountActivity, LoginActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
+                finish()
             }
         }
+
+        binding.btnSwitchToCustomer.setOnClickListener { showSwitchToCustomerConfirmation() }
+        
+        binding.btnNotifications.setOnClickListener {
+            Toast.makeText(this, "Notifications settings coming soon", Toast.LENGTH_SHORT).show()
+        }
     }
 
-    private fun showProgressDialog(message: String) {
-        progressDialog = AlertDialog.Builder(this)
-            .setMessage(message)
-            .setCancelable(false)
-            .create()
-        progressDialog?.show()
+    private fun toggleEditMode(editing: Boolean) {
+        binding.btnToggleEdit.visibility = if (editing) View.GONE else View.VISIBLE
+        binding.btnCancelEdit.visibility = if (editing) View.VISIBLE else View.GONE
+        binding.tvShopName.visibility = if (editing) View.GONE else View.VISIBLE
+        binding.tvShopDescription.visibility = if (editing) View.GONE else View.VISIBLE
+        binding.statsRow.visibility = if (editing) View.GONE else View.VISIBLE
+        binding.editFields.visibility = if (editing) View.VISIBLE else View.GONE
+        
+        if (editing) {
+            binding.etShopName.setText(currentProfile?.shop_name ?: "")
+            binding.etShopDescription.setText(currentProfile?.shop_description ?: "")
+        }
     }
 
-    private fun hideProgressDialog() {
-        progressDialog?.dismiss()
-        progressDialog = null
+    private fun saveProfileInline() {
+        val userId = SupabaseManager.getCurrentUserId() ?: return
+        val shopName = binding.etShopName.text.toString().trim()
+        val shopDescription = binding.etShopDescription.text.toString().trim()
+
+        if (shopName.isEmpty()) {
+            Toast.makeText(this, "Shop name cannot be empty", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        showProgressDialog("Saving profile...")
+        val updates = mapOf<String, Any>("shop_name" to shopName, "shop_description" to shopDescription)
+
+        SupabaseManager.updateProfile(userId, updates, object : SupabaseManager.SupabaseCallback {
+            override fun onResult(success: Boolean, error: String?) {
+                lifecycleScope.launch {
+                    hideProgressDialog()
+                    if (success) {
+                        Toast.makeText(this@SellerAccountActivity, "Profile saved successfully", Toast.LENGTH_SHORT).show()
+                        toggleEditMode(false)
+                        loadUserData()
+                    } else {
+                        Toast.makeText(this@SellerAccountActivity, "Failed to save profile: $error", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        })
+    }
+
+    private fun showChangePasswordDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_change_password, null)
+        val etNewPassword = dialogView.findViewById<android.widget.EditText>(R.id.newPasswordInput)
+        val etConfirmPassword = dialogView.findViewById<android.widget.EditText>(R.id.confirmPasswordInput)
+
+        AlertDialog.Builder(this)
+            .setTitle("Change Password")
+            .setView(dialogView)
+            .setPositiveButton("Update") { _, _ ->
+                val newPass = etNewPassword.text.toString()
+                val confirmPass = etConfirmPassword.text.toString()
+                if (newPass.length < 6) {
+                    Toast.makeText(this, "Password too short", Toast.LENGTH_SHORT).show()
+                } else if (newPass == confirmPass) {
+                    updatePassword(newPass)
+                } else {
+                    Toast.makeText(this, "Passwords do not match", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun updatePassword(newPass: String) {
+        showProgressDialog("Updating password...")
+        SupabaseManager.updatePassword(newPass, object : SupabaseManager.SupabaseCallback {
+            override fun onResult(success: Boolean, error: String?) {
+                hideProgressDialog()
+                if (success) {
+                    Toast.makeText(this@SellerAccountActivity, "Password updated successfully", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@SellerAccountActivity, "Error: $error", Toast.LENGTH_SHORT).show()
+                }
+            }
+        })
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode == Activity.RESULT_OK) {
             when (requestCode) {
+                PICK_LOCATION_REQUEST -> {
+                    val lat = data?.getDoubleExtra("latitude", 0.0) ?: 0.0
+                    val lng = data?.getDoubleExtra("longitude", 0.0) ?: 0.0
+                    if (lat != 0.0) saveLocation(lat, lng)
+                }
                 PICK_COVER_PHOTO_REQUEST -> {
                     data?.data?.let { uri ->
                         coverPhotoUri = uri
                         binding.ivCoverPhoto.setImageURI(uri)
-                        // Show save button when a new photo is selected
-                        binding.btnSave.visibility = android.view.View.VISIBLE
-                        binding.btnDeleteCoverPhoto.visibility = android.view.View.GONE
-                        binding.btnSetCoverPhoto.text = "Change Cover Photo"
-                        Toast.makeText(this, "Cover photo selected. Click Save Photo to save your changes!", Toast.LENGTH_LONG).show()
-                    }
-                }
-                200 -> {
-                    val latitude = data?.getDoubleExtra("latitude", 0.0) ?: 0.0
-                    val longitude = data?.getDoubleExtra("longitude", 0.0) ?: 0.0
-                    val locationName = data?.getStringExtra("locationName") ?: "Location"
-                    
-                    if (latitude != 0.0 && longitude != 0.0) {
-                        // Immediately update UI with new location
-                        binding.tvCurrentLocation.text = "$locationName (Location set)"
-                        binding.btnDeleteLocation.visibility = android.view.View.VISIBLE
-                        binding.btnIdentifyLocation.visibility = android.view.View.GONE
-                        binding.miniMapView.visibility = android.view.View.VISIBLE
-                        showMiniMapLibrePreview(latitude, longitude)
-                        
-                        // Save location to Firestore
-                        val userId = auth.currentUser?.uid ?: return
-                        db.collection("sellers").document(userId)
-                            .update(
-                                mapOf(
-                                    "latitude" to latitude,
-                                    "longitude" to longitude,
-                                    "locationName" to locationName
-                                )
-                            )
-                            .addOnSuccessListener {
-                                Toast.makeText(this, "Location saved successfully", Toast.LENGTH_SHORT).show()
-                            }
-                            .addOnFailureListener { e ->
-                                Toast.makeText(this, "Failed to save location: ${e.message}", Toast.LENGTH_SHORT).show()
-                            }
+                        uploadCoverPhoto(uri)
                     }
                 }
             }
         }
     }
 
-    private fun enableEditing() {
-        // Enable editing of fields
-        binding.etShopName.isEnabled = true
-        binding.etShopDescription.isEnabled = true
-        binding.btnIdentifyLocation.isEnabled = true
-        
-        // Don't disable the cover photo button
-        binding.btnSetCoverPhoto.isEnabled = true
-        
-        Toast.makeText(this, "Edit mode enabled. Make your changes and click Save when done.", Toast.LENGTH_LONG).show()
+    private fun uploadCoverPhoto(uri: Uri) {
+        val userId = SupabaseManager.getCurrentUserId() ?: return
+        showProgressDialog("Uploading photo...")
+        lifecycleScope.launch {
+            try {
+                val bytes = withContext(Dispatchers.IO) {
+                    contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                }
+                if (bytes != null) {
+                    val path = "$userId/cover_${UUID.randomUUID()}.jpg"
+                    SupabaseManager.uploadImage("thriftshop_db", path, bytes, object : SupabaseManager.SupabaseCallbackWithUrl {
+                        override fun onResult(success: Boolean, url: String?, error: String?) {
+                            if (success && url != null) {
+                                // Delete old image if it exists
+                                currentProfile?.shop_location?.let { oldUrl ->
+                                    if (oldUrl.isNotEmpty() && oldUrl.startsWith("http")) {
+                                        SupabaseManager.deleteImage("thriftshop_db", oldUrl)
+                                    }
+                                }
+                                saveCoverUrlToProfile(userId, url)
+                            } else {
+                                hideProgressDialog()
+                                Toast.makeText(this@SellerAccountActivity, "Upload failed: $error", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    })
+                }
+            } catch (e: Exception) { hideProgressDialog() }
+        }
     }
 
-    private fun saveShopProfile() {
-        val userId = auth.currentUser?.uid ?: return
-        val shopName = binding.etShopName.text.toString().trim()
-        val shopDescription = binding.etShopDescription.text.toString().trim()
-
-        if (shopName.isEmpty()) {
-            Toast.makeText(this, "Please enter a shop name", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        showProgressDialog("Saving profile...")
-        Log.d("SellerAccount", "Starting profile save for user: $userId")
-
-        val updates = mutableMapOf(
-            "shopName" to shopName,
-            "shopDescription" to shopDescription
-        )
-
-        // Handle cover photo upload if changed
-        if (coverPhotoUri != null) {
-            Log.d("SellerAccount", "Cover photo URI exists, starting upload")
-            val storageRef = FirebaseStorage.getInstance().reference
-                .child("cover_photos")
-                .child(userId)
-                .child("cover_photo.jpg")
-
-            storageRef.putFile(coverPhotoUri!!)
-                .addOnSuccessListener {
-                    Log.d("SellerAccount", "Cover photo upload successful, getting download URL")
-                    storageRef.downloadUrl.addOnSuccessListener { downloadUri ->
-                        Log.d("SellerAccount", "Got download URL: ${downloadUri.toString()}")
-                        updates["coverPhotoUrl"] = downloadUri.toString()
-                        saveToFirestore(userId, updates)
-                        // Update UI after successful save
-                        binding.btnSave.visibility = android.view.View.GONE
-                        binding.btnDeleteCoverPhoto.visibility = android.view.View.VISIBLE
-                        binding.btnSetCoverPhoto.text = "Change Cover Photo"
-                        coverPhotoUrl = downloadUri.toString()
-                    }.addOnFailureListener { e ->
-                        Log.e("SellerAccount", "Failed to get download URL", e)
-                        hideProgressDialog()
-                        Toast.makeText(this, "Failed to get cover photo URL: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-                }
-                .addOnFailureListener { e ->
-                    Log.e("SellerAccount", "Failed to upload cover photo", e)
+    private fun saveCoverUrlToProfile(userId: String, url: String) {
+        SupabaseManager.updateProfile(userId, mapOf("shop_location" to url), object : SupabaseManager.SupabaseCallback {
+            override fun onResult(success: Boolean, error: String?) {
+                lifecycleScope.launch {
                     hideProgressDialog()
-                    Toast.makeText(this, "Failed to upload cover photo: ${e.message}", Toast.LENGTH_SHORT).show()
+                    if (success) {
+                        Toast.makeText(this@SellerAccountActivity, "Cover photo updated", Toast.LENGTH_SHORT).show()
+                        loadUserData()
+                    } else {
+                        Toast.makeText(this@SellerAccountActivity, "Failed to save URL: $error", Toast.LENGTH_SHORT).show()
+                    }
                 }
-                .addOnProgressListener { taskSnapshot ->
-                    val progress = (100.0 * taskSnapshot.bytesTransferred / taskSnapshot.totalByteCount).toInt()
-                    Log.d("SellerAccount", "Upload progress: $progress%")
+            }
+        })
+    }
+
+    private fun saveLocation(lat: Double, lng: Double) {
+        val userId = SupabaseManager.getCurrentUserId() ?: return
+        showProgressDialog("Saving location...")
+        lifecycleScope.launch {
+            try {
+                SupabaseManager.client.postgrest["seller_markers"].delete { filter { eq("seller_id", userId) } }
+                val marker = SupabaseManager.SellerMarker(seller_id = userId, latitude = lat, longitude = lng, title = currentProfile?.shop_name ?: "Shop")
+                SupabaseManager.client.postgrest["seller_markers"].insert(marker)
+                withContext(Dispatchers.Main) {
+                    hideProgressDialog()
+                    Toast.makeText(this@SellerAccountActivity, "Location saved", Toast.LENGTH_SHORT).show()
+                    loadLocationData(userId)
                 }
-        } else {
-            Log.d("SellerAccount", "No cover photo to upload, saving to Firestore directly")
-            saveToFirestore(userId, updates)
+            } catch (e: Exception) { hideProgressDialog() }
         }
     }
 
-    private fun saveToFirestore(userId: String, updates: Map<String, Any>) {
-        Log.d("SellerAccount", "Saving to Firestore with updates: $updates")
-        db.collection("sellers").document(userId)
-            .update(updates)
-            .addOnSuccessListener {
-                Log.d("SellerAccount", "Profile updated successfully in Firestore")
-                hideProgressDialog()
-                // Check if a cover photo was updated
-                if (updates.containsKey("coverPhotoUrl")) {
-                    Toast.makeText(this, "Profile and cover photo updated successfully!", Toast.LENGTH_LONG).show()
-                } else {
-                    Toast.makeText(this, "Profile updated successfully", Toast.LENGTH_SHORT).show()
-                }
-                // Clear the cover photo URI after successful save
-                coverPhotoUri = null
+    private fun showMiniMapLibrePreview(lat: Double, lon: Double) {
+        binding.miniMapView.visibility = View.VISIBLE
+        miniMapView?.onResume()
+        miniMapView?.getMapAsync { map ->
+            map.setStyle(Style.Builder().fromUri("https://api.maptiler.com/maps/streets/style.json?key=${getString(R.string.maptiler_api_key)}")) {
+                val loc = LatLng(lat, lon)
+                map.addMarker(MarkerOptions().position(loc).title("Shop Location"))
+                map.animateCamera(CameraUpdateFactory.newLatLngZoom(loc, 15.0), 1000)
             }
-            .addOnFailureListener { e ->
-                Log.e("SellerAccount", "Failed to update profile in Firestore", e)
-                hideProgressDialog()
-                Toast.makeText(this, "Failed to update profile: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+        }
     }
+
+    private fun showProgressDialog(msg: String) { progressDialog = AlertDialog.Builder(this).setMessage(msg).setCancelable(false).show() }
+    private fun hideProgressDialog() { progressDialog?.dismiss() }
 
     private fun showSwitchToCustomerConfirmation() {
-        AlertDialog.Builder(this)
-            .setTitle("Switch to Customer Mode")
-            .setMessage("Are you sure you want to switch to customer mode? You can switch back to seller mode anytime from your customer profile.")
+        AlertDialog.Builder(this).setTitle("Switch Mode").setMessage("Switch to customer mode?")
             .setPositiveButton("Switch") { _, _ ->
-                switchToCustomerMode()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun switchToCustomerMode() {
-        val userId = auth.currentUser?.uid ?: return
-        val userEmail = auth.currentUser?.email ?: return
-
-        // Update user document to indicate they were previously a seller
-        db.collection("users").document(userId)
-            .update("switchedFromSeller", true)
-            .addOnSuccessListener {
-                // Start the landing activity (customer mode)
-                val intent = Intent(this, LandingActivity::class.java)
-                intent.putExtra("accountType", "customer")
-                intent.putExtra("email", userEmail)
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                startActivity(intent)
+                startActivity(Intent(this, LandingActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
                 finish()
-            }
-            .addOnFailureListener { e ->
-                Toast.makeText(this, "Failed to switch to customer mode: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+            }.setNegativeButton("Cancel", null).show()
     }
 
-    override fun onStart() {
-        super.onStart()
-        miniMapView?.onStart()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        miniMapView?.onResume()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        miniMapView?.onPause()
-    }
-
-    override fun onStop() {
-        super.onStop()
-        miniMapView?.onStop()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        miniMapView?.onSaveInstanceState(outState)
-    }
-} 
+    override fun onStart() { super.onStart(); miniMapView?.onStart() }
+    override fun onResume() { super.onResume(); miniMapView?.onResume() }
+    override fun onPause() { super.onPause(); miniMapView?.onPause() }
+    override fun onStop() { super.onStop(); miniMapView?.onStop() }
+}

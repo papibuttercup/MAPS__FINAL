@@ -13,14 +13,10 @@ import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
 
 public class CustomerOrdersFragment extends Fragment {
     private ViewPager2 viewPager;
     private TabLayout tabLayout;
-    private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
     private int startTab = 0;
 
     public static CustomerOrdersFragment newInstance(int tabIndex) {
@@ -40,12 +36,8 @@ public class CustomerOrdersFragment extends Fragment {
             startTab = getArguments().getInt("startTab", 0);
         }
 
-        // Initialize Firebase
-        mAuth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance();
-
         // Check if user is logged in
-        if (mAuth.getCurrentUser() == null) {
+        if (SupabaseManager.getCurrentUserId() == null) {
             Toast.makeText(getContext(), "Please log in to view orders", Toast.LENGTH_SHORT).show();
             return view;
         }

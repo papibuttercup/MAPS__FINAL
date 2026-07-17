@@ -4,10 +4,6 @@ import android.app.Application;
 import android.util.Log;
 import androidx.appcompat.app.AppCompatDelegate;
 import com.google.firebase.FirebaseApp;
-import com.google.firebase.appcheck.FirebaseAppCheck;
-import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory;
-import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory;
-import com.google.firebase.database.FirebaseDatabase;
 
 public class MyApplication extends Application {
     private static final String TAG = "MyApplication";
@@ -18,27 +14,12 @@ public class MyApplication extends Application {
         
         // Force Light Mode
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-        
-        // Initialize Firebase
-        FirebaseApp.initializeApp(this);
-        
-        // Initialize Firebase App Check
-        FirebaseAppCheck firebaseAppCheck = FirebaseAppCheck.getInstance();
-        
-        // Use debug provider for development
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Using debug App Check provider");
-            firebaseAppCheck.installAppCheckProviderFactory(
-                DebugAppCheckProviderFactory.getInstance()
-            );
-        } else {
-            // Use Play Integrity for production
-            firebaseAppCheck.installAppCheckProviderFactory(
-                PlayIntegrityAppCheckProviderFactory.getInstance()
-            );
+
+        // Try to initialize Firebase safely
+        try {
+            FirebaseApp.initializeApp(this);
+        } catch (Exception e) {
+            Log.e(TAG, "Firebase initialization failed. Make sure google-services.json is present.", e);
         }
-        
-        // Set up persistence for Firebase Database
-        FirebaseDatabase.getInstance().setPersistenceEnabled(true);
     }
-} 
+}

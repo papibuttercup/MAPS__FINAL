@@ -173,21 +173,59 @@
                     android:textStyle="bold"
                     android:layout_marginBottom="20dp" />
 
-                <!-- Color Selection -->
-                <TextView
-                    android:id="@+id/txtSelectedColor"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Color: Black"
-                    android:textColor="#666666"
-                    android:textSize="13sp"
-                    android:layout_marginBottom="8dp" />
-
-                <HorizontalScrollView
+                <!-- Variation Preview Row -->
+                <LinearLayout
+                    android:id="@+id/layoutVariationPreview"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:scrollbars="none"
-                    android:layout_marginBottom="20dp">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingVertical="12dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:layout_marginBottom="16dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_dashboard"
+                        app:tint="@color/black" />
+
+                    <LinearLayout
+                        android:id="@+id/layoutPreviewImages"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginStart="12dp" />
+
+                    <TextView
+                        android:id="@+id/txtVariationSummary"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:text="Select options"
+                        android:textColor="@color/gray_700"
+                        android:textSize="14sp" />
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_arrow_right"
+                        app:tint="@color/gray_400" />
+                </LinearLayout>
+
+                <!-- Hidden direct selection (kept for logic compatibility if needed) -->
+                <TextView
+                    android:id="@+id/txtSelectedColor"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:visibility="gone" />
+
+                <HorizontalScrollView
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:visibility="gone">
                     <LinearLayout
                         android:id="@+id/layoutDetailColors"
                         android:layout_width="wrap_content"
@@ -195,21 +233,16 @@
                         android:orientation="horizontal" />
                 </HorizontalScrollView>
 
-                <!-- Size Selection -->
                 <TextView
                     android:id="@+id/txtSelectedSize"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Color: Black"
-                    android:textColor="#666666"
-                    android:textSize="13sp"
-                    android:layout_marginBottom="8dp" />
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:visibility="gone" />
 
                 <HorizontalScrollView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:scrollbars="none"
-                    android:layout_marginBottom="32dp">
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:visibility="gone">
                     <LinearLayout
                         android:id="@+id/layoutDetailSizes"
                         android:layout_width="wrap_content"
@@ -252,8 +285,18 @@
             android:layout_height="48dp"
             android:src="@drawable/ic_heart_v2"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:layout_marginEnd="16dp"
+            android:layout_marginEnd="8dp"
             android:contentDescription="Favorite" />
+
+        <ImageButton
+            android:id="@+id/btnMessageSellerBottom"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_message"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginEnd="16dp"
+            app:tint="@color/black"
+            android:contentDescription="Message Seller" />
 
         <Button
             android:id="@+id/btnAddToCart"

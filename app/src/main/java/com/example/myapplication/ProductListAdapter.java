@@ -75,6 +75,18 @@ public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.
         } else if (product.productImageUris != null && !product.productImageUris.isEmpty()) {
             imageUri = product.productImageUris.get(0);
         }
+
+        // NEW: Handle Supabase URLs (https://) and legacy paths
+        if (imageUri != null && !imageUri.isEmpty()) {
+            if (!imageUri.startsWith("http")) {
+                if (imageUri.startsWith("uploads/")) {
+                    imageUri = Config.BASE_URL + imageUri;
+                } else {
+                    imageUri = Config.PRODUCT_IMAGES_URL + imageUri;
+                }
+            }
+        }
+
         if (imageUri != null && !imageUri.isEmpty()) {
             Glide.with(context)
                 .load(imageUri)
@@ -93,7 +105,7 @@ public class ProductListAdapter extends RecyclerView.Adapter<ProductListAdapter.
             if (isSeller) {
                 holder.btnEditProduct.setVisibility(View.VISIBLE);
                 holder.btnEditProduct.setOnClickListener(v -> {
-                    Intent intent = new Intent(context, EditProductActivity.class);
+                    Intent intent = new Intent(context, ListNewItemActivity.class);
                     intent.putExtra("productId", product.id);
                     context.startActivity(intent);
                 });

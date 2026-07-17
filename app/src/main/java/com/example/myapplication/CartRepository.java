@@ -1,45 +1,64 @@
 package com.example.myapplication;
 
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FieldValue;
-import com.google.firebase.firestore.FirebaseFirestore;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class CartRepository {
-    private final FirebaseFirestore db = FirebaseFirestore.getInstance();
-    private final String customerId = FirebaseAuth.getInstance().getUid();
+    private final String customerId = SupabaseManager.getCurrentUserId();
 
-    public void addToCart(CartItem item, OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
-        db.collection("carts").document(customerId)
-            .update("cartItems", FieldValue.arrayUnion(item))
-            .addOnSuccessListener(onSuccess)
-            .addOnFailureListener(e -> {
-                // If cart doesn't exist, create it
-                Map<String, Object> cart = new HashMap<>();
-                cart.put("cartItems", java.util.Arrays.asList(item));
-                db.collection("carts").document(customerId)
-                    .set(cart)
-                    .addOnSuccessListener(onSuccess)
-                    .addOnFailureListener(onFailure);
-            });
+    public interface CartCallback {
+        void onSuccess();
+        void onFailure(String error);
     }
 
-    public void getCart(OnSuccessListener<DocumentSnapshot> onSuccess, OnFailureListener onFailure) {
-        db.collection("carts").document(customerId)
-            .get()
-            .addOnSuccessListener(onSuccess)
-            .addOnFailureListener(onFailure);
+    public interface CartItemsCallback {
+        void onSuccess(List<SupabaseManager.CartItem> items);
+        void onFailure(String error);
     }
 
-    public void clearCart(OnSuccessListener<Void> onSuccess, OnFailureListener onFailure) {
-        db.collection("carts").document(customerId)
-            .delete()
-            .addOnSuccessListener(onSuccess)
-            .addOnFailureListener(onFailure);
+    public void addToCart(SupabaseManager.CartItem item, CartCallback callback) {
+        if (customerId == null) {
+            callback.onFailure("User not logged in");
+            return;
+        }
+
+        SupabaseManager.addToCart(item, new SupabaseManager.SupabaseCallback() {
+            @Override
+            public void onResult(boolean success, String error) {
+                if (success) {
+                    callback.onSuccess();
+                } else {
+                    callback.onFailure(error);
+                }
+            }
+        });
     }
-} 
+
+    public void getCart(CartItemsCallback callback) {
+        if (customerId == null) {
+            callback.onFailure("User not logged in");
+            return;
+        }
+
+        SupabaseManager.getCart(customerId, new SupabaseManager.SupabaseCallbackWithCart() {
+            @Override
+            public void onResult(boolean success, List<SupabaseManager.CartItem> items, String error) {
+                if (success) {
+                    callback.onSuccess(items);
+                } else {
+                    callback.onFailure(error);
+                }
+            }
+        });
+    }
+
+    public void clearCart(CartCallback callback) {
+        if (customerId == null) {
+            callback.onFailure("User not logged in");
+            return;
+        }
+
+        // SupabaseManager doesn't have clearCart yet, we could implement it or delete items one by one
+        // For now, I'll assume we can implement it in SupabaseManager later or use a workaround.
+        callback.onFailure("clearCart not yet implemented in SupabaseManager");
+    }
+}

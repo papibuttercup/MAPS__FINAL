@@ -8,10 +8,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
 import java.util.ArrayList;
 import java.util.List;
 import android.util.Log;
@@ -21,8 +17,7 @@ import android.app.AlertDialog;
 public class SellerCanceledOrdersActivity extends AppCompatActivity {
     private RecyclerView recyclerOrders;
     private OrdersAdapter adapter;
-    private List<Order> orderList = new ArrayList<>();
-    private FirebaseFirestore db;
+    private List<SupabaseManager.Order> orderList = new ArrayList<>();
     private String sellerId;
     private TextView emptyView;
 
@@ -36,8 +31,7 @@ public class SellerCanceledOrdersActivity extends AppCompatActivity {
         adapter = new OrdersAdapter(orderList, false);  // Set isCustomerView to false
         recyclerOrders.setAdapter(adapter);
 
-        db = FirebaseFirestore.getInstance();
-        sellerId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        sellerId = SupabaseManager.getCurrentUserId();
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -50,59 +44,60 @@ public class SellerCanceledOrdersActivity extends AppCompatActivity {
 
         adapter.setOnOrderClickListener(order -> showOrderDetailsDialog(order));
 
-        loadCanceledOrders();
+        if (sellerId != null) {
+            loadCanceledOrders();
+        } else {
+            Toast.makeText(this, "Please log in first", Toast.LENGTH_SHORT).show();
+            finish();
+        }
     }
 
     private void loadCanceledOrders() {
-        db.collection("orders")
-            .whereEqualTo("sellerId", sellerId)
-            .whereEqualTo("status", "canceled")
-            .orderBy("timestamp", Query.Direction.DESCENDING)
-            .get()
-            .addOnSuccessListener(queryDocumentSnapshots -> {
-                orderList.clear();
-                Log.d("Orders", "Canceled orders found: " + queryDocumentSnapshots.size());
-                for (DocumentSnapshot doc : queryDocumentSnapshots) {
-                    Order order = doc.toObject(Order.class);
-                    if (order != null) {
-                        order.orderId = doc.getId();  // Set the orderId from document ID
-                        orderList.add(order);
+        SupabaseManager.getOrders(sellerId, true, new SupabaseManager.SupabaseCallbackWithOrders() {
+            @Override
+            public void onResult(boolean success, List<SupabaseManager.Order> orders, String error) {
+                if (success && orders != null) {
+                    orderList.clear();
+                    for (SupabaseManager.Order order : orders) {
+                        if ("canceled".equalsIgnoreCase(order.getStatus())) {
+                            orderList.add(order);
+                        }
                     }
-                }
-                adapter.notifyDataSetChanged();
-                if (orderList.isEmpty()) {
-                    emptyView.setVisibility(View.VISIBLE);
-                    recyclerOrders.setVisibility(View.GONE);
+                    adapter.notifyDataSetChanged();
+                    updateVisibility();
                 } else {
-                    emptyView.setVisibility(View.GONE);
-                    recyclerOrders.setVisibility(View.VISIBLE);
+                    Log.e("Orders", "Error loading canceled orders: " + error);
+                    Toast.makeText(SellerCanceledOrdersActivity.this, "Failed to load: " + error, Toast.LENGTH_SHORT).show();
                 }
-            })
-            .addOnFailureListener(e -> {
-                Log.e("Orders", "Error loading canceled orders", e);
-                Toast.makeText(this, "Failed to load canceled orders: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            });
+            }
+        });
     }
 
-    private void showOrderDetailsDialog(Order order) {
-        StringBuilder details = new StringBuilder();
-        details.append("Order ID: ").append(order.orderId).append("\n");
-        details.append("Status: Canceled\n");
-        details.append("Total: ₱").append(order.totalPrice).append("\n");
-        details.append("Delivery: ").append(order.deliveryAddress).append("\n");
-        details.append("Date: ").append(order.timestamp != null ? order.timestamp.toDate() : "").append("\n\n");
-        details.append("Products:\n");
-        if (order.products != null) {
-            for (int i = 0; i < order.products.size(); i++) {
-                Object name = order.products.get(i).get("name");
-                Object qty = order.products.get(i).get("quantity");
-                details.append("- ").append(name != null ? name : "").append(" x").append(qty != null ? qty : "1").append("\n");
-            }
+    private void updateVisibility() {
+        if (orderList.isEmpty()) {
+            emptyView.setVisibility(View.VISIBLE);
+            recyclerOrders.setVisibility(View.GONE);
+        } else {
+            emptyView.setVisibility(View.GONE);
+            recyclerOrders.setVisibility(View.VISIBLE);
         }
+    }
+
+    private void showOrderDetailsDialog(SupabaseManager.Order order) {
+        StringBuilder details = new StringBuilder();
+        details.append("Order ID: ").append(order.getId()).append("\n");
+        details.append("Status: Canceled\n");
+        details.append("Total: ₱").append(order.getTotal_amount()).append("\n");
+        details.append("Delivery: ").append(order.getDelivery_address()).append("\n");
+        details.append("Date: ").append(order.getCreated_at() != null ? order.getCreated_at() : "").append("\n\n");
+        
+        // SupabaseManager.Order doesn't currently store product list details in the data class
+        // but it has the total amount.
+        
         new AlertDialog.Builder(this)
             .setTitle("Canceled Order Details")
             .setMessage(details.toString())
             .setPositiveButton("OK", null)
             .show();
     }
-} 
+}

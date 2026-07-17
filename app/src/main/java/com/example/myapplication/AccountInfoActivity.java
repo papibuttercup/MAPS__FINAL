@@ -12,32 +12,26 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.firebase.auth.AuthCredential;
-import com.google.firebase.auth.EmailAuthProvider;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
+import io.github.jan.supabase.auth.user.UserInfo;
 
 public class AccountInfoActivity extends AppCompatActivity {
-    private FirebaseAuth mAuth;
     private TextView userEmailTextView;
-    private FirebaseUser currentUser;
+    private UserInfo currentUser;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_account_info);
 
-        // Initialize Firebase Auth
-        mAuth = FirebaseAuth.getInstance();
-
-        // Get current user
-        currentUser = mAuth.getCurrentUser();
-        if (currentUser == null) {
+        // Get current user from Supabase using helper
+        var session = SupabaseManager.getCurrentSession();
+        if (session == null) {
             // If no user is logged in, redirect to login
             startActivity(new Intent(this, LoginActivity.class));
             finish();
             return;
         }
+        currentUser = session.getUser();
 
         // Set up views
         userEmailTextView = findViewById(R.id.userEmail);
@@ -45,7 +39,9 @@ public class AccountInfoActivity extends AppCompatActivity {
         TextView setPasswordText = findViewById(R.id.setPasswordText);
 
         // Display user email
-        userEmailTextView.setText(currentUser.getEmail());
+        if (currentUser != null) {
+            userEmailTextView.setText(currentUser.getEmail());
+        }
 
         // Set up logout button
         logoutButton.setOnClickListener(v -> showLogoutConfirmationDialog());
@@ -94,33 +90,9 @@ public class AccountInfoActivity extends AppCompatActivity {
                     return;
                 }
 
-                // Re-authenticate user before changing password
-                AuthCredential credential = EmailAuthProvider.getCredential(
-                    currentUser.getEmail(), currentPassword);
-
-                currentUser.reauthenticate(credential)
-                    .addOnCompleteListener(task -> {
-                        if (task.isSuccessful()) {
-                            // Update password
-                            currentUser.updatePassword(newPassword)
-                                .addOnCompleteListener(updateTask -> {
-                                    if (updateTask.isSuccessful()) {
-                                        Toast.makeText(AccountInfoActivity.this,
-                                            "Password updated successfully",
-                                            Toast.LENGTH_SHORT).show();
-                                        dialog.dismiss();
-                                    } else {
-                                        Toast.makeText(AccountInfoActivity.this,
-                                            "Failed to update password: " + updateTask.getException().getMessage(),
-                                            Toast.LENGTH_SHORT).show();
-                                    }
-                                });
-                        } else {
-                            Toast.makeText(AccountInfoActivity.this,
-                                "Current password is incorrect",
-                                Toast.LENGTH_SHORT).show();
-                        }
-                    });
+                // Password change in Supabase
+                Toast.makeText(this, "Supabase password change not implemented yet", Toast.LENGTH_SHORT).show();
+                dialog.dismiss();
             });
         });
 
@@ -132,10 +104,18 @@ public class AccountInfoActivity extends AppCompatActivity {
             .setTitle("Logout")
             .setMessage("Are you sure you want to logout?")
             .setPositiveButton("Logout", (dialog, which) -> {
-                mAuth.signOut();
-                Toast.makeText(AccountInfoActivity.this, "Logged out successfully", Toast.LENGTH_SHORT).show();
-                startActivity(new Intent(AccountInfoActivity.this, LoginActivity.class));
-                finish();
+                SupabaseManager.signOut(new SupabaseManager.SupabaseCallback() {
+                    @Override
+                    public void onResult(boolean success, String error) {
+                        if (success) {
+                            Toast.makeText(AccountInfoActivity.this, "Logged out successfully", Toast.LENGTH_SHORT).show();
+                            startActivity(new Intent(AccountInfoActivity.this, LoginActivity.class));
+                            finish();
+                        } else {
+                            Toast.makeText(AccountInfoActivity.this, "Logout failed: " + error, Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
             })
             .setNegativeButton("Cancel", null)
             .show();

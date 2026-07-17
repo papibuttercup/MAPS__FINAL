@@ -9,15 +9,15 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.example.myapplication.databinding.ActivityAccountBinding
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.coroutines.launch
 
 class AccountFragment : Fragment() {
     private var _binding: ActivityAccountBinding? = null
     private val binding get() = _binding!!
-    private lateinit var auth: FirebaseAuth
-    private lateinit var db: FirebaseFirestore
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -31,9 +31,6 @@ class AccountFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        auth = FirebaseAuth.getInstance()
-        db = FirebaseFirestore.getInstance()
-
         binding.backButton.visibility = View.GONE
 
         setupClickListeners()
@@ -42,12 +39,14 @@ class AccountFragment : Fragment() {
 
     private fun setupClickListeners() {
         binding.logoutButton.setOnClickListener {
-            auth.signOut()
-            requireContext().getSharedPreferences("user_prefs", Context.MODE_PRIVATE).edit().clear().apply()
-            val intent = Intent(requireContext(), LoginActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-            activity?.finish()
+            lifecycleScope.launch {
+                SupabaseManager.client.auth.signOut()
+                requireContext().getSharedPreferences("user_prefs", Context.MODE_PRIVATE).edit().clear().apply()
+                val intent = Intent(requireContext(), LoginActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                startActivity(intent)
+                activity?.finish()
+            }
         }
 
         binding.editProfileButton.setOnClickListener {
@@ -101,24 +100,35 @@ class AccountFragment : Fragment() {
     }
 
     private fun loadUserData() {
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            binding.userEmail.text = currentUser.email
-            db.collection("users").document(currentUser.uid)
-                .get()
-                .addOnSuccessListener { documentSnapshot ->
-                    if (isAdded && documentSnapshot.exists()) {
-                        val firstName = documentSnapshot.getString("firstName")
-                        val lastName = documentSnapshot.getString("lastName")
+        val session = SupabaseManager.client.auth.currentSessionOrNull()
+        if (session != null) {
+            val user = session.user
+            binding.userEmail.text = user?.email
+            
+            lifecycleScope.launch {
+                try {
+                    val userId = user?.id ?: return@launch
+                    val profile = SupabaseManager.client.postgrest["profiles"]
+                        .select {
+                            filter {
+                                eq("id", userId)
+                            }
+                        }
+                        .decodeSingleOrNull<SupabaseManager.Profile>()
+
+                    if (isAdded && profile != null) {
                         val fullName = when {
-                            !firstName.isNullOrEmpty() && !lastName.isNullOrEmpty() -> "$firstName $lastName"
-                            !firstName.isNullOrEmpty() -> firstName
-                            !lastName.isNullOrEmpty() -> lastName
+                            !profile.first_name.isNullOrEmpty() && !profile.last_name.isNullOrEmpty() -> 
+                                "${profile.first_name} ${profile.last_name}"
+                            !profile.first_name.isNullOrEmpty() -> profile.first_name
+                            !profile.last_name.isNullOrEmpty() -> profile.last_name
                             else -> "User"
                         }
                         binding.userName.text = fullName
-                        val wasSeller = documentSnapshot.getBoolean("switchedFromSeller") ?: false
-                        if (wasSeller) {
+                        
+                        // In Supabase schema, check account_type or a specific flag
+                        val isSeller = profile.account_type == "seller"
+                        if (isSeller) {
                             binding.switchToSellerButton.visibility = View.VISIBLE
                         } else {
                             binding.switchToSellerButton.visibility = View.GONE
@@ -127,14 +137,14 @@ class AccountFragment : Fragment() {
                         binding.userName.text = "User"
                         binding.switchToSellerButton.visibility = View.GONE
                     }
-                }
-                .addOnFailureListener {
+                } catch (e: Exception) {
                     if (isAdded) {
                         binding.userName.text = "User"
                         binding.switchToSellerButton.visibility = View.GONE
                         Toast.makeText(requireContext(), "Error loading user data", Toast.LENGTH_SHORT).show()
                     }
                 }
+            }
         } else {
             val intent = Intent(requireContext(), LoginActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -155,13 +165,23 @@ class AccountFragment : Fragment() {
     }
 
     private fun switchToSellerMode() {
-        val userId = auth.currentUser?.uid ?: return
-        val userEmail = auth.currentUser?.email ?: return
-        db.collection("sellers").document(userId)
-            .get()
-            .addOnSuccessListener { sellerDoc ->
+        val session = SupabaseManager.client.auth.currentSessionOrNull() ?: return
+        val userId = session.user?.id ?: return
+        val userEmail = session.user?.email ?: return
+
+        lifecycleScope.launch {
+            try {
+                val profile = SupabaseManager.client.postgrest["profiles"]
+                    .select {
+                        filter {
+                            eq("id", userId)
+                            eq("account_type", "seller")
+                        }
+                    }
+                    .decodeSingleOrNull<SupabaseManager.Profile>()
+
                 if (isAdded) {
-                    if (sellerDoc != null && sellerDoc.exists()) {
+                    if (profile != null) {
                         val intent = Intent(requireContext(), SellerMainActivity::class.java)
                         intent.putExtra("accountType", "seller")
                         intent.putExtra("email", userEmail)
@@ -172,10 +192,10 @@ class AccountFragment : Fragment() {
                         Toast.makeText(requireContext(), "Seller account not found", Toast.LENGTH_SHORT).show()
                     }
                 }
-            }
-            .addOnFailureListener { e ->
+            } catch (e: Exception) {
                 if (isAdded) Toast.makeText(requireContext(), "Failed to switch to seller mode: ${e.message}", Toast.LENGTH_SHORT).show()
             }
+        }
     }
 
     override fun onDestroyView() {

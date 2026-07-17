@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="0dp"
+    android:layout_height="84dp"
+    app:layout_columnWeight="1"
+    android:layout_margin="4dp"
+    android:background="@drawable/bg_dashed_border"
+    android:clickable="true"
+    android:focusable="true">
+
+    <!-- Placeholder "+" -->
+    <TextView
+        android:id="@+id/photoPlaceholder"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="+"
+        android:textSize="20sp"
+        android:textColor="@color/wizard_mist"
+        android:visibility="visible" />
+
+    <!-- Photo Preview -->
+    <ImageView
+        android:id="@+id/photoPreview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:visibility="gone"
+        android:contentDescription="Photo preview" />
+
+    <!-- Remove Button (Hidden by default, shown when photo present) -->
+    <ImageButton
+        android:id="@+id/btnRemovePhoto"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_gravity="top|end"
+        android:background="@drawable/bg_circle_cloud"
+        android:src="@drawable/ic_close"
+        app:tint="@color/wizard_ink"
+        android:padding="4dp"
+        android:visibility="gone"
+        android:contentDescription="Remove photo" />
+
+</FrameLayout>

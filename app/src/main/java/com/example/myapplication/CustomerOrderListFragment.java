@@ -10,17 +10,13 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
 import java.util.ArrayList;
 import java.util.List;
 
 public class CustomerOrderListFragment extends Fragment {
     private RecyclerView recyclerView;
     private OrdersAdapter adapter;
-    private List<Order> orders = new ArrayList<>();
-    private FirebaseFirestore db;
+    private List<SupabaseManager.Order> orders = new ArrayList<>();
     private String customerId;
     private String statusFilter;
 
@@ -43,41 +39,40 @@ public class CustomerOrderListFragment extends Fragment {
 
         recyclerView = view.findViewById(R.id.recyclerOrders);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        // Note: OrdersAdapter might need to be updated to accept SupabaseManager.Order
         adapter = new OrdersAdapter(orders, true);
         recyclerView.setAdapter(adapter);
         
-        db = FirebaseFirestore.getInstance();
-        customerId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        customerId = SupabaseManager.getCurrentUserId();
         
         loadOrders();
         return view;
     }
 
     private void loadOrders() {
-        Query query = db.collection("orders")
-            .whereEqualTo("customerId", customerId);
+        if (customerId == null) return;
 
-        if (statusFilter != null && !statusFilter.equals("all")) {
-            query = query.whereEqualTo("status", statusFilter);
-        }
-
-        query.orderBy("timestamp", Query.Direction.DESCENDING)
-            .addSnapshotListener((value, error) -> {
-                if (error != null) {
+        SupabaseManager.getOrders(customerId, false, new SupabaseManager.SupabaseCallbackWithOrders() {
+            @Override
+            public void onResult(boolean success, List<SupabaseManager.Order> orderList, String error) {
+                if (success && orderList != null) {
+                    orders.clear();
+                    if (statusFilter != null && !statusFilter.equals("all")) {
+                        for (SupabaseManager.Order order : orderList) {
+                            if (order.getStatus().equalsIgnoreCase(statusFilter)) {
+                                orders.add(order);
+                            }
+                        }
+                    } else {
+                        orders.addAll(orderList);
+                    }
+                    adapter.notifyDataSetChanged();
+                } else if (error != null) {
                     if (isAdded()) {
-                        Toast.makeText(getContext(), "Failed to load orders: " + error.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                    return;
-                }
-                orders.clear();
-                if (value != null) {
-                    for (var doc : value) {
-                        Order order = doc.toObject(Order.class);
-                        order.orderId = doc.getId();
-                        orders.add(order);
+                        Toast.makeText(getContext(), "Failed to load orders: " + error, Toast.LENGTH_SHORT).show();
                     }
                 }
-                adapter.notifyDataSetChanged();
-            });
+            }
+        });
     }
 }

@@ -15,8 +15,9 @@ import java.util.List;
 public class CategoryProductsFragment extends Fragment {
     private RecyclerView recyclerView;
     private ProductAdapter adapter;
-    private List<SellerProduct> productList;
+    private List<SupabaseManager.ProductModel> productList;
     private String categoryName;
+    private String mainCategory;
 
     public static CategoryProductsFragment newInstance(String category) {
         CategoryProductsFragment fragment = new CategoryProductsFragment();
@@ -31,6 +32,7 @@ public class CategoryProductsFragment extends Fragment {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             categoryName = getArguments().getString("category");
+            mainCategory = getArguments().getString("mainCategory");
         }
     }
 
@@ -39,6 +41,12 @@ public class CategoryProductsFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_seller_products, container, false);
         
+        // Hide total products count text if visible in layout
+        View totalProducts = view.findViewById(R.id.tvTotalProducts);
+        if (totalProducts != null) totalProducts.setVisibility(View.GONE);
+        View btnListItem = view.findViewById(R.id.btnListItem);
+        if (btnListItem != null) btnListItem.setVisibility(View.GONE);
+
         recyclerView = view.findViewById(R.id.rvProducts);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         
@@ -46,17 +54,33 @@ public class CategoryProductsFragment extends Fragment {
         adapter = new ProductAdapter(productList, false);
         recyclerView.setAdapter(adapter);
         
-        // TODO: Load products for the selected category
         loadProducts();
         
         return view;
     }
 
-    private void loadProducts() {
-        // TODO: Implement loading products from your data source
-        // This is a placeholder for demonstration
-        productList.clear();
-        // Add your product loading logic here
-        adapter.notifyDataSetChanged();
+    @Override
+    public void onResume() {
+        super.onResume();
+        loadProducts();
     }
-} 
+
+    private void loadProducts() {
+        if (mainCategory == null || categoryName == null) return;
+        
+        SupabaseManager.getProductsByCategory(mainCategory, categoryName, new SupabaseManager.SupabaseCallbackWithProducts() {
+            @Override
+            public void onResult(boolean success, List<SupabaseManager.ProductModel> products, String error) {
+                if (success && products != null) {
+                    productList.clear();
+                    productList.addAll(products);
+                    adapter.notifyDataSetChanged();
+                } else if (!success) {
+                    if (getContext() != null) {
+                        android.widget.Toast.makeText(getContext(), "Error: " + error, android.widget.Toast.LENGTH_LONG).show();
+                    }
+                }
+            }
+        });
+    }
+}

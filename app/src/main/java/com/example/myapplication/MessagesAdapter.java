@@ -55,8 +55,13 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.Messag
             holder.productName.setText(message.getProductName());
             holder.productPrice.setText("₱" + message.getProductPrice());
             if (message.getProductImage() != null && !message.getProductImage().isEmpty()) {
+                String imageUrl = message.getProductImage();
+                if (!imageUrl.startsWith("http")) {
+                    imageUrl = Config.PRODUCT_IMAGES_URL + imageUrl;
+                }
                 Glide.with(holder.productImage.getContext())
-                    .load(message.getProductImage())
+                    .load(imageUrl)
+                    .placeholder(R.drawable.ic_image_placeholder)
                     .into(holder.productImage);
             } else {
                 holder.productImage.setImageResource(R.drawable.ic_image_placeholder);

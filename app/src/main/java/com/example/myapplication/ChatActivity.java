@@ -15,20 +15,10 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
-import com.google.firebase.Timestamp;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FieldValue;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class ChatActivity extends AppCompatActivity {
-    private static final String TAG = "ChatActivity";
     private RecyclerView recyclerMessages;
     private EditText editMessage;
     private ImageButton btnSend;
@@ -37,55 +27,26 @@ public class ChatActivity extends AppCompatActivity {
     private View productCard;
     private MessagesAdapter adapter;
     private List<Message> messageList = new ArrayList<>();
-    private String chatId;
-    private String otherUserId;
-    private String currentUserId;
-    private FirebaseFirestore db;
-    private String productId;
-    private boolean isCustomerInitiator;
-    private boolean hasSentProductMessage = false;
-    private String currentProductImageUrl = null;
+    private String chatId, otherUserId, currentUserId, productId;
+    private SupabaseManager.ProductModel currentProduct;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
-
-        // Set up the Toolbar
+        
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setDisplayShowTitleEnabled(true);
-        }
+        if (getSupportActionBar() != null) getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         toolbar.setNavigationOnClickListener(v -> finish());
 
-        // Initialize Firebase
-        db = FirebaseFirestore.getInstance();
-        FirebaseAuth auth = FirebaseAuth.getInstance();
+        currentUserId = SupabaseManager.getCurrentUserId();
+        if (currentUserId == null) { finish(); return; }
         
-        if (auth.getCurrentUser() == null) {
-            Log.e(TAG, "No authenticated user found");
-            Toast.makeText(this, "Please login to use chat", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
-        }
-
-        currentUserId = auth.getCurrentUser().getUid();
         otherUserId = getIntent().getStringExtra("otherUserId");
         productId = getIntent().getStringExtra("productId");
-        isCustomerInitiator = getIntent().getBooleanExtra("isCustomerInitiator", true);
+        chatId = currentUserId.compareTo(otherUserId) < 0 ? currentUserId + "_" + otherUserId : otherUserId + "_" + currentUserId;
 
-        if (otherUserId == null || otherUserId.isEmpty()) {
-            Log.e(TAG, "otherUserId is null or empty");
-            Toast.makeText(this, "Invalid chat partner", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
-        }
-
-        Log.d(TAG, "Initializing chat - Current User: " + currentUserId + ", Other User: " + otherUserId);
-
-        // Initialize views
         recyclerMessages = findViewById(R.id.recyclerMessages);
         editMessage = findViewById(R.id.editMessage);
         btnSend = findViewById(R.id.btnSend);
@@ -94,236 +55,96 @@ public class ChatActivity extends AppCompatActivity {
         productPrice = findViewById(R.id.productPrice);
         productCard = findViewById(R.id.productCard);
 
-        // Set up RecyclerView
         recyclerMessages.setLayoutManager(new LinearLayoutManager(this));
         adapter = new MessagesAdapter(messageList, currentUserId);
         recyclerMessages.setAdapter(adapter);
 
-        // Get product info from intent (for instant display)
-        String productNameStr = getIntent().getStringExtra("productName");
-        String productImageStr = getIntent().getStringExtra("productImage");
-        double productPriceVal = getIntent().getDoubleExtra("productPrice", 0.0);
-        if (productImageStr != null && !productImageStr.isEmpty()) {
-            currentProductImageUrl = productImageStr;
-        }
-
-        // Show/hide product card
         if (productId != null) {
             productCard.setVisibility(View.VISIBLE);
-            if (productNameStr != null && !productNameStr.isEmpty()) productName.setText(productNameStr);
-            if (productPriceVal > 0) productPrice.setText("₱" + productPriceVal);
-            if (productImageStr != null && !productImageStr.isEmpty()) {
-                Glide.with(this).load(productImageStr).into(productImage);
-                currentProductImageUrl = productImageStr;
-            }
             loadProductDetails();
-        } else {
-            productCard.setVisibility(View.GONE);
-        }
+        } else productCard.setVisibility(View.GONE);
 
-        // Initialize or get existing chat
-        initializeChat();
-
-        // Set up send button
+        loadMessages();
         btnSend.setOnClickListener(v -> sendMessage());
     }
 
-    private void initializeChat() {
-        // Try to find current user in 'users' collection first
-        db.collection("users").document(currentUserId)
-            .get()
-            .addOnSuccessListener(currentUserDoc -> {
-                if (currentUserDoc.exists()) {
-                    proceedWithChatInit();
-                } else {
-                    // Try 'sellers' collection as fallback
-                    db.collection("sellers").document(currentUserId)
-                        .get()
-                        .addOnSuccessListener(sellerDoc -> {
-                            if (sellerDoc.exists()) {
-                                proceedWithChatInit();
-                            } else {
-                                Log.e(TAG, "Current user not found in users or sellers collection: " + currentUserId);
-                                Toast.makeText(this, "Your account was not found. Please re-login or contact support.", Toast.LENGTH_LONG).show();
-                                finish();
-                            }
-                        })
-                        .addOnFailureListener(e -> {
-                            Log.e(TAG, "Error checking sellers collection", e);
-                            Toast.makeText(this, "Failed to verify your account (seller check)", Toast.LENGTH_SHORT).show();
-                            finish();
-                        });
-                }
-            })
-            .addOnFailureListener(e -> {
-                Log.e(TAG, "Error checking users collection", e);
-                Toast.makeText(this, "Failed to verify your account (user check)", Toast.LENGTH_SHORT).show();
-                finish();
-            });
-    }
-
-    private void proceedWithChatInit() {
-        List<String> participants = Arrays.asList(currentUserId, otherUserId);
-        participants.sort(String::compareTo);
-        chatId = participants.get(0) + "_" + participants.get(1);
-        Log.d(TAG, "Generated chat ID: " + chatId);
-        db.collection("chats").document(chatId)
-            .get()
-            .addOnSuccessListener(documentSnapshot -> {
-                if (!documentSnapshot.exists()) {
-                    createNewChat(participants);
-                } else {
-                    Log.d(TAG, "Existing chat found");
-                    loadMessages();
-                    // Mark as seen if seller
-                    markMessagesSeenIfSeller();
-                }
-            })
-            .addOnFailureListener(e -> {
-                Log.e(TAG, "Error checking chat existence", e);
-                Toast.makeText(this, "Failed to initialize chat (chat doc)", Toast.LENGTH_SHORT).show();
-            });
-    }
-
-    private void createNewChat(List<String> participants) {
-        Map<String, Object> chat = new HashMap<>();
-        chat.put("participants", participants);
-        chat.put("lastMessage", "");
-        chat.put("lastMessageTime", Timestamp.now());
-        chat.put("unseenBySeller", isCustomerInitiator); // If customer starts, mark unseen
-        if (productId != null) {
-            chat.put("productId", productId);
-        }
-        Log.d(TAG, "Creating new chat with ID: " + chatId);
-        db.collection("chats").document(chatId)
-            .set(chat)
-            .addOnSuccessListener(aVoid -> {
-                Log.d(TAG, "Chat created successfully");
-                loadMessages();
-            })
-            .addOnFailureListener(e -> {
-                Log.e(TAG, "Error creating chat", e);
-                Toast.makeText(this, "Failed to create chat", Toast.LENGTH_SHORT).show();
-            });
-    }
-
     private void loadProductDetails() {
-        if (productId != null) {
-            db.collection("products").document(productId)
-                .get()
-                .addOnSuccessListener(documentSnapshot -> {
-                    if (documentSnapshot.exists()) {
-                        Product product = documentSnapshot.toObject(Product.class);
-                        if (product != null) {
-                            productName.setText(product.name);
-                            productPrice.setText("₱" + product.price);
-                            if (product.coverPhotoUri != null) {
-                                Glide.with(this)
-                                    .load(product.coverPhotoUri)
-                                    .into(productImage);
-                                currentProductImageUrl = product.coverPhotoUri;
-                            }
-                        }
+        SupabaseManager.getProduct(productId, new SupabaseManager.SupabaseCallbackWithProduct() {
+            @Override public void onResult(boolean success, SupabaseManager.ProductModel product, String error) {
+                if (success && product != null) {
+                    currentProduct = product;
+                    productName.setText(product.getName());
+                    productPrice.setText("₱" + product.getPrice());
+                    
+                    String imageUrl = product.getCover_photo_url();
+                    if (imageUrl != null && !imageUrl.isEmpty() && !imageUrl.startsWith("http")) {
+                        imageUrl = Config.PRODUCT_IMAGES_URL + imageUrl;
                     }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error loading product details", e);
-                    productCard.setVisibility(View.GONE);
-                });
-        }
-    }
-
-    private void loadMessages() {
-        db.collection("chats").document(chatId)
-            .collection("messages")
-            .orderBy("timestamp", Query.Direction.ASCENDING)
-            .addSnapshotListener((value, error) -> {
-                if (error != null) {
-                    Log.e(TAG, "Error loading messages", error);
-                    Toast.makeText(this, "Failed to load messages", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                hasSentProductMessage = false;
-                if (value != null) {
-                    messageList.clear();
-                    for (QueryDocumentSnapshot doc : value) {
-                        Message message = doc.toObject(Message.class);
-                        messageList.add(message);
-                        if (productId != null && productId.equals(message.getProductId())) {
-                            hasSentProductMessage = true;
+                    Glide.with(ChatActivity.this).load(imageUrl).into(productImage);
+                    
+                    // Update any existing messages that might be waiting for product info
+                    for (Message m : messageList) {
+                        if (m.getProductId() != null && m.getProductId().equals(productId)) {
+                            m.setProductName(product.getName());
+                            m.setProductPrice(product.getPrice());
+                            m.setProductImage(product.getCover_photo_url());
                         }
                     }
                     adapter.notifyDataSetChanged();
-                    if (!messageList.isEmpty()) {
-                        recyclerMessages.scrollToPosition(messageList.size() - 1);
-                    }
                 }
-            });
+            }
+        });
+    }
+
+    private void loadMessages() {
+        SupabaseManager.getMessages(chatId, new SupabaseManager.SupabaseCallbackWithMessages() {
+            @Override public void onResult(boolean success, List<SupabaseManager.ChatMessage> messages, String error) {
+                if (success && messages != null) {
+                    messageList.clear();
+                    for (SupabaseManager.ChatMessage m : messages) {
+                        Message msg = new Message();
+                        msg.setSenderId(m.getSender_id()); 
+                        msg.setContent(m.getContent());
+                        msg.setProductId(m.getProduct_id());
+                        
+                        // Set product details if we have them
+                        if (m.getProduct_id() != null) {
+                            if (currentProduct != null && m.getProduct_id().equals(currentProduct.getId())) {
+                                msg.setProductName(currentProduct.getName());
+                                msg.setProductPrice(currentProduct.getPrice());
+                                msg.setProductImage(currentProduct.getCover_photo_url());
+                            }
+                            // If it's a different product, it remains without details until we fetch them (TBD)
+                        }
+                        
+                        // Map timestamp
+                        if (m.getCreated_at() != null) {
+                            try {
+                                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault());
+                                java.util.Date date = sdf.parse(m.getCreated_at());
+                                if (date != null) msg.setTimestamp(date.getTime());
+                            } catch (Exception e) {
+                                Log.e("ChatActivity", "Error parsing date: " + m.getCreated_at());
+                            }
+                        }
+
+                        messageList.add(msg);
+                    }
+                    adapter.notifyDataSetChanged();
+                    recyclerMessages.scrollToPosition(messageList.size() - 1);
+                }
+            }
+        });
     }
 
     private void sendMessage() {
-        String messageText = editMessage.getText().toString().trim();
-        if (messageText.isEmpty()) return;
-        Message message = new Message();
-        message.setSenderId(currentUserId);
-        message.setContent(messageText);
-        message.setTimestamp(System.currentTimeMillis()); // Local preview, will be overwritten by server if needed or kept for immediate display
-
-        // Only attach product info if not already sent
-        if (!hasSentProductMessage && productCard.getVisibility() == View.VISIBLE && productId != null) {
-            message.setProductId(productId);
-            message.setProductName(productName.getText().toString());
-            message.setProductImage(currentProductImageUrl);
-            try {
-                String priceStr = productPrice.getText().toString().replace("₱", "").replace(",", "").trim();
-                message.setProductPrice(Double.parseDouble(priceStr));
-            } catch (Exception e) {
-                message.setProductPrice(0.0);
+        String content = editMessage.getText().toString().trim();
+        if (content.isEmpty()) return;
+        SupabaseManager.ChatMessage m = new SupabaseManager.ChatMessage(null, chatId, currentUserId, content, null, false, productId);
+        SupabaseManager.sendMessage(m, new SupabaseManager.SupabaseCallback() {
+            @Override public void onResult(boolean success, String error) {
+                if (success) { editMessage.setText(""); loadMessages(); }
             }
-            hasSentProductMessage = true;
-        }
-
-        Map<String, Object> messageMap = new HashMap<>();
-        messageMap.put("senderId", message.getSenderId());
-        messageMap.put("content", message.getContent());
-        messageMap.put("timestamp", FieldValue.serverTimestamp());
-        messageMap.put("isRead", message.isRead());
-        if (message.getProductId() != null) {
-            messageMap.put("productId", message.getProductId());
-            messageMap.put("productName", message.getProductName());
-            messageMap.put("productImage", message.getProductImage());
-            messageMap.put("productPrice", message.getProductPrice());
-        }
-
-        db.collection("chats").document(chatId)
-            .collection("messages")
-            .add(messageMap)
-            .addOnSuccessListener(documentReference -> {
-                // Update last message in chat document
-                Map<String, Object> updates = new HashMap<>();
-                updates.put("lastMessage", messageText);
-                updates.put("lastMessageTime", Timestamp.now());
-                if (isCustomerInitiator || !currentUserId.equals(otherUserId)) {
-                    updates.put("unseenBySeller", true);
-                }
-                db.collection("chats").document(chatId)
-                    .update(updates)
-                    .addOnFailureListener(e -> {
-                        Log.e(TAG, "Error updating chat document", e);
-                    });
-                editMessage.setText("");
-            })
-            .addOnFailureListener(e -> {
-                Log.e(TAG, "Error sending message", e);
-                Toast.makeText(this, "Failed to send message", Toast.LENGTH_SHORT).show();
-            });
+        });
     }
-
-    private void markMessagesSeenIfSeller() {
-        // If the current user is the seller, mark messages as seen
-        if (!isCustomerInitiator && currentUserId.equals(otherUserId)) return; // Defensive
-        db.collection("chats").document(chatId)
-            .update("unseenBySeller", false);
-    }
-} 
+}

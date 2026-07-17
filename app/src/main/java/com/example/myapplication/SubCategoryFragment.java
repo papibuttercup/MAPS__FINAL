@@ -36,7 +36,7 @@ public class SubCategoryFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        categoryName = getArguments() != null ? getArguments().getString("categoryName", "Woman") : "Woman";
+        categoryName = getArguments() != null ? getArguments().getString("categoryName", "Women") : "Women";
         
         TextView titleView = view.findViewById(R.id.txtSubCategoryTitle);
         titleView.setText(categoryName);
@@ -57,49 +57,44 @@ public class SubCategoryFragment extends Fragment {
         SubCategoryAdapter adapter = new SubCategoryAdapter(requireContext(), groupList, childMap);
         expandableListView.setAdapter(adapter);
 
-        // Optional: Expand first group by default
-        // expandableListView.expandGroup(1);
+        expandableListView.setOnChildClickListener((parent, v, groupPosition, childPosition, id) -> {
+            String subcat = childMap.get(groupList.get(groupPosition)).get(childPosition);
+            openCategoryProducts(categoryName, subcat);
+            return true;
+        });
+    }
+
+    private void openCategoryProducts(String mainCat, String subCat) {
+        CategoryProductsFragment fragment = CategoryProductsFragment.newInstance(subCat);
+        Bundle args = fragment.getArguments();
+        if (args == null) args = new Bundle();
+        args.putString("mainCategory", mainCat);
+        fragment.setArguments(args);
+
+        requireActivity().getSupportFragmentManager()
+            .beginTransaction()
+            .replace(R.id.fragment_container, fragment)
+            .addToBackStack(null)
+            .commit();
     }
 
     private void prepareData() {
         groupList = new ArrayList<>();
         childMap = new HashMap<>();
 
-        groupList.add("New");
-        groupList.add("Top");
-        groupList.add("Dresses");
-        groupList.add("Bottom");
-        groupList.add("Underwear");
-        groupList.add("Jewelry");
+        Map<String, List<CategoryConstants.Group>> hierarchy = CategoryConstants.getCategoryHierarchy();
+        List<CategoryConstants.Group> groups = hierarchy.get(categoryName);
 
-        List<String> newList = new ArrayList<>();
-        newList.add("Arrived Today");
-        newList.add("Best Sellers");
-        childMap.put("New", newList);
-
-        List<String> topList = new ArrayList<>();
-        topList.add("Basics");
-        topList.add("T-Shirts");
-        topList.add("Shirts");
-        topList.add("Tank tops");
-        topList.add("Blouses");
-        childMap.put("Top", topList);
-
-        List<String> dressList = new ArrayList<>();
-        dressList.add("Mini");
-        dressList.add("Midi");
-        dressList.add("Maxi");
-        childMap.put("Dresses", dressList);
-
-        List<String> bottomList = new ArrayList<>();
-        bottomList.add("Pants");
-        bottomList.add("Jeans");
-        bottomList.add("Skirts");
-        bottomList.add("Shorts");
-        childMap.put("Bottom", bottomList);
-
-        childMap.put("Underwear", new ArrayList<>());
-        childMap.put("Jewelry", new ArrayList<>());
+        if (groups != null) {
+            for (CategoryConstants.Group g : groups) {
+                groupList.add(g.name);
+                childMap.put(g.name, g.subs);
+            }
+        } else {
+            // Default/Fallback
+            groupList.add("General");
+            childMap.put("General", new ArrayList<>());
+        }
     }
 
     private static class SubCategoryAdapter extends BaseExpandableListAdapter {

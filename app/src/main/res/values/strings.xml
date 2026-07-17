@@ -45,16 +45,14 @@
         <item>Kids</item>
     </string-array>
     <string-array name="categories_women">
-        <item>Dress</item>
         <item>Tops</item>
         <item>T-Shirts</item>
         <item>Shirts</item>
-        <item>Beach wear</item>
+        <item>Dresses</item>
         <item>Pants</item>
         <item>Jeans</item>
-        <item>Shorts</item>
         <item>Skirts</item>
-        <item>Outerwear</item>
+        <item>Shorts</item>
         <item>Jackets</item>
         <item>Suits</item>
         <item>Sweaters</item>
@@ -62,6 +60,7 @@
         <item>Activewear</item>
         <item>Sleepwear</item>
         <item>Underwear</item>
+        <item>Beach wear</item>
     </string-array>
     <string-array name="categories_men">
         <item>Shirts</item>
@@ -89,6 +88,11 @@
         <item>Hoodies</item>
         <item>Sleepwear</item>
         <item>Underwear</item>
+    </string-array>
+    <string-array name="categories_home">
+        <item>Furniture</item>
+        <item>Decor</item>
+        <item>Kitchen</item>
     </string-array>
     <string-array name="baguio_barangays">
         <item>Abanao-Zandueta-Kayong-Chugum-Otek</item>

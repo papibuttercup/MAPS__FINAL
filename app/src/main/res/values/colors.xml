@@ -47,4 +47,20 @@
     <color name="product_orange">#FF9800</color>
     <color name="product_gray">#9E9E9E</color>
     <color name="default_color">#BDBDBD</color>
+
+    <!-- Wizard UI Colors (Mapped to App Palette) -->
+    <color name="wizard_ink">@color/textPrimary</color>
+    <color name="wizard_slate">@color/textSecondary</color>
+    <color name="wizard_mist">#B7B7C2</color>
+    <color name="wizard_cloud">#F5F5F5</color>
+    <color name="wizard_paper">@color/white</color>
+    <color name="wizard_line">#E1E1E1</color>
+    <color name="wizard_accent">@color/colorAccent</color>
+    <color name="wizard_accent_dark">#D44B00</color>
+    <color name="wizard_accent_tint">#FFF2EB</color>
+    <color name="wizard_mint">#149174</color>
+    <color name="wizard_mint_tint">#E4F5F0</color>
+    <color name="wizard_ember">#EE4D2D</color>
+    <color name="wizard_ember_dark">#C93E20</color>
+    <color name="wizard_ember_tint">#FDECE8</color>
 </resources>

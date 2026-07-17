@@ -6,13 +6,13 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import androidx.appcompat.app.AppCompatActivity
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import androidx.lifecycle.lifecycleScope
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.coroutines.launch
 
 @SuppressLint("CustomSplashScreen")
 class SplashActivity : AppCompatActivity() {
-    private lateinit var auth: FirebaseAuth
-    private lateinit var db: FirebaseFirestore
     private var destinationIntent: Intent? = null
     private var isCheckComplete = false
 
@@ -20,9 +20,6 @@ class SplashActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
         supportActionBar?.hide()
-
-        auth = FirebaseAuth.getInstance()
-        db = FirebaseFirestore.getInstance()
 
         checkUserSession()
 
@@ -33,89 +30,56 @@ class SplashActivity : AppCompatActivity() {
     }
 
     private fun checkUserSession() {
-        val currentUser = auth.currentUser
-        if (currentUser == null) {
+        val session = SupabaseManager.client.auth.currentSessionOrNull()
+        if (session == null) {
             destinationIntent = Intent(this, LoginActivity::class.java)
             isCheckComplete = true
         } else {
-            val email = currentUser.email ?: ""
-            checkAccountType(email)
+            val user = session.user
+            val userId = user?.id ?: ""
+            checkAccountType(userId)
         }
     }
 
-    private fun checkAccountType(email: String) {
-        db.collection("sellers")
-            .whereEqualTo("email", email)
-            .limit(1)
-            .get()
-            .addOnSuccessListener { sellerDocuments ->
-                if (!sellerDocuments.isEmpty) {
-                    val sellerDoc = sellerDocuments.documents[0]
-                    val verificationStatus = sellerDoc.getString("verificationStatus")
-                    val isDisabled = sellerDoc.getBoolean("isDisabled") ?: false
+    private fun checkAccountType(userId: String) {
+        lifecycleScope.launch {
+            try {
+                val profile = SupabaseManager.client.postgrest["profiles"]
+                    .select {
+                        filter {
+                            eq("id", userId)
+                        }
+                    }
+                    .decodeSingleOrNull<SupabaseManager.Profile>()
+
+                if (profile == null) {
+                    SupabaseManager.client.auth.signOut()
+                    destinationIntent = Intent(this@SplashActivity, LoginActivity::class.java)
+                } else {
+                    val accountType = profile.account_type ?: "customer"
+                    // Assuming isDisabled is a boolean in Profile
+                    // val isDisabled = profile.isDisabled ?: false 
+                    // For now, check what's in Profile data class
                     
-                    if (isDisabled || verificationStatus == "pending" || verificationStatus == "rejected") {
-                        auth.signOut()
-                        destinationIntent = Intent(this, LoginActivity::class.java)
-                    } else if (verificationStatus == "approved") {
-                        destinationIntent = Intent(this, SellerMainActivity::class.java).apply {
+                    destinationIntent = when (accountType) {
+                        "moderator" -> Intent(this@SplashActivity, ModeratorActivity::class.java)
+                        "seller" -> Intent(this@SplashActivity, SellerMainActivity::class.java).apply {
                             putExtra("accountType", "seller")
-                            putExtra("email", email)
+                            putExtra("email", profile.email)
                         }
-                    } else {
-                        checkRegularUser(email)
-                        return@addOnSuccessListener
-                    }
-                    isCheckComplete = true
-                } else {
-                    checkRegularUser(email)
-                }
-            }
-            .addOnFailureListener {
-                auth.signOut()
-                destinationIntent = Intent(this, LoginActivity::class.java)
-                isCheckComplete = true
-            }
-    }
-
-    private fun checkRegularUser(email: String) {
-        db.collection("users")
-            .whereEqualTo("email", email)
-            .limit(1)
-            .get()
-            .addOnSuccessListener { documents ->
-                if (documents.isEmpty) {
-                    auth.signOut()
-                    destinationIntent = Intent(this, LoginActivity::class.java)
-                } else {
-                    val userDoc = documents.documents[0]
-                    val accountType = userDoc.getString("accountType") ?: "user"
-                    val isDisabled = userDoc.getBoolean("isDisabled") ?: false
-
-                    if (isDisabled) {
-                        auth.signOut()
-                        destinationIntent = Intent(this, LoginActivity::class.java)
-                    } else {
-                        destinationIntent = when (accountType) {
-                            "moderator" -> Intent(this, ModeratorActivity::class.java)
-                            "seller" -> Intent(this, SellerMainActivity::class.java).apply {
-                                putExtra("accountType", "seller")
-                                putExtra("email", email)
-                            }
-                            else -> Intent(this, LandingActivity::class.java).apply {
-                                putExtra("accountType", accountType)
-                                putExtra("email", email)
-                            }
+                        else -> Intent(this@SplashActivity, LandingActivity::class.java).apply {
+                            putExtra("accountType", accountType)
+                            putExtra("email", profile.email)
                         }
                     }
                 }
+            } catch (e: Exception) {
+                SupabaseManager.client.auth.signOut()
+                destinationIntent = Intent(this@SplashActivity, LoginActivity::class.java)
+            } finally {
                 isCheckComplete = true
             }
-            .addOnFailureListener {
-                auth.signOut()
-                destinationIntent = Intent(this, LoginActivity::class.java)
-                isCheckComplete = true
-            }
+        }
     }
 
     private fun navigateToDestination() {

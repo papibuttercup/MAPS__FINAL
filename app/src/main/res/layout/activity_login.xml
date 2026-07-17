@@ -13,6 +13,7 @@
 
         <!-- Header -->
         <TextView
+            android:id="@+id/signInTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Sign in"

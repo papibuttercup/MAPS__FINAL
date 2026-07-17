@@ -10,8 +10,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,16 +19,11 @@ public class AddAddressActivity extends AppCompatActivity {
     private SwitchCompat switchDefault;
     private Button btnSubmit;
     private String selectedLabel = "";
-    private FirebaseFirestore db;
-    private FirebaseAuth auth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_address);
-
-        db = FirebaseFirestore.getInstance();
-        auth = FirebaseAuth.getInstance();
 
         initializeViews();
         setupClickListeners();
@@ -99,23 +92,33 @@ public class AddAddressActivity extends AppCompatActivity {
     }
 
     private void submitAddress() {
-        String userId = auth.getCurrentUser().getUid();
-        Map<String, Object> address = new HashMap<>();
-        address.put("fullName", editFullName.getText().toString().trim());
-        address.put("phoneNumber", editPhoneNumber.getText().toString().trim());
-        address.put("street", editStreet.getText().toString().trim());
-        address.put("postalCode", editPostalCode.getText().toString().trim());
-        address.put("label", selectedLabel);
-        address.put("isDefault", switchDefault.isChecked());
+        String userId = SupabaseManager.getCurrentUserId();
+        if (userId == null) {
+            Toast.makeText(this, "Please sign in to add address", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        db.collection("users").document(userId).collection("addresses")
-            .add(address)
-            .addOnSuccessListener(documentReference -> {
-                Toast.makeText(this, "Address added successfully", Toast.LENGTH_SHORT).show();
-                finish();
-            })
-            .addOnFailureListener(e -> {
-                Toast.makeText(this, "Error adding address", Toast.LENGTH_SHORT).show();
-            });
+        Map<String, Object> address = new HashMap<>();
+        address.put("user_id", userId);
+        address.put("full_name", editFullName.getText().toString().trim());
+        address.put("phone_number", editPhoneNumber.getText().toString().trim());
+        address.put("street", editStreet.getText().toString().trim());
+        address.put("postal_code", editPostalCode.getText().toString().trim());
+        address.put("label", selectedLabel);
+        address.put("is_default", switchDefault.isChecked());
+
+        // Assuming a general updateProfile or similar for addresses, 
+        // or a new method in SupabaseManager. For now, I'll use updateProfile logic or similar.
+        SupabaseManager.updateProfile(userId, address, new SupabaseManager.SupabaseCallback() {
+            @Override
+            public void onResult(boolean success, String error) {
+                if (success) {
+                    Toast.makeText(AddAddressActivity.this, "Address added successfully", Toast.LENGTH_SHORT).show();
+                    finish();
+                } else {
+                    Toast.makeText(AddAddressActivity.this, "Error adding address: " + error, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
 }

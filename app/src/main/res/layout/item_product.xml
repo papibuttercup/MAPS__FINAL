@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
     app:cardCornerRadius="16dp"
-    app:cardElevation="6dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/gray_200"
+    app:strokeWidth="1dp"
     android:background="@color/white">
 
     <LinearLayout
@@ -14,14 +16,14 @@
         android:orientation="vertical"
         android:padding="12dp">
 
-        <ImageView
+        <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/imgProduct"
             android:layout_width="match_parent"
             android:layout_height="160dp"
             android:scaleType="centerCrop"
             android:contentDescription="Product image"
             android:layout_marginBottom="8dp"
-            android:clipToOutline="true"/>
+            app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize12" />
 
         <TextView
             android:id="@+id/txtProductName"
@@ -30,9 +32,9 @@
             android:text="Product Name"
             android:textStyle="bold"
             android:textSize="16sp"
-            android:textColor="#222"
-            android:paddingTop="4dp"
-            android:paddingBottom="2dp"/>
+            android:textColor="@color/black"
+            android:maxLines="1"
+            android:ellipsize="end" />
 
         <TextView
             android:id="@+id/txtProductPrice"
@@ -41,46 +43,57 @@
             android:text="₱0.00"
             android:textColor="@color/colorAccent"
             android:textStyle="bold"
-            android:textSize="15sp"
-            android:paddingBottom="2dp"/>
+            android:textSize="16sp"
+            android:layout_marginTop="4dp" />
 
         <TextView
             android:id="@+id/textProductStock"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Stock: 0"
-            android:textColor="#888888"
-            android:textSize="13sp" />
+            android:textColor="@color/gray_500"
+            android:textSize="13sp"
+            android:layout_marginTop="2dp" />
 
+        <!-- Kept for compatibility with ProductListAdapter -->
         <LinearLayout
             android:id="@+id/layoutProductColors"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:layout_marginTop="4dp"
-            android:layout_marginBottom="4dp"/>
+            android:layout_marginBottom="4dp"
+            android:visibility="gone" />
 
-        <ImageButton
-            android:id="@+id/btnEditProduct"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_gravity="end"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_menu_edit"
-            android:contentDescription="Edit"
-            android:tint="@color/colorAccent"
-            android:padding="4dp"
-            android:layout_marginTop="8dp"/>
-        <ImageButton
-            android:id="@+id/btnDeleteProduct"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_gravity="end"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_menu_delete"
-            android:contentDescription="Delete"
-            android:tint="#FF0000"
-            android:padding="4dp"
-            android:layout_marginTop="8dp"/>
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp">
+
+            <ImageButton
+                android:id="@+id/btnEditProduct"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_edit"
+                android:contentDescription="Edit"
+                app:tint="@color/colorAccent"
+                android:padding="6dp"
+                app:layout_constraintBottom_toTopOf="@id/btnDeleteProduct"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <ImageButton
+                android:id="@+id/btnDeleteProduct"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_delete"
+                android:contentDescription="Delete"
+                app:tint="#FF5252"
+                android:padding="6dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </LinearLayout>
-</androidx.cardview.widget.CardView> 
+</com.google.android.material.card.MaterialCardView>

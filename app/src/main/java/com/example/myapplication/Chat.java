@@ -1,13 +1,12 @@
 package com.example.myapplication;
 
-import com.google.firebase.Timestamp;
 import java.util.List;
 
 public class Chat {
     public String chatId;
     public List<String> participants;
     public String lastMessage;
-    public Timestamp lastMessageTime;
+    public String lastMessageTime; // Changed from Timestamp to String (ISO 8601) for Supabase
     public String productId;
     public String productName;
     public String productImage;
@@ -16,7 +15,7 @@ public class Chat {
 
     public Chat() {}
 
-    public Chat(String chatId, List<String> participants, String lastMessage, Timestamp lastMessageTime, String productId, String productName, String productImage) {
+    public Chat(String chatId, List<String> participants, String lastMessage, String lastMessageTime, String productId, String productName, String productImage) {
         this.chatId = chatId;
         this.participants = participants;
         this.lastMessage = lastMessage;
@@ -25,4 +24,4 @@ public class Chat {
         this.productName = productName;
         this.productImage = productImage;
     }
-} 
+}

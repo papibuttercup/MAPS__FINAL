@@ -10,24 +10,24 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import android.widget.ArrayAdapter;
+import io.github.jan.supabase.auth.AuthKt;
+import io.github.jan.supabase.auth.providers.builtin.Email;
+import kotlinx.serialization.json.JsonObjectBuilder;
+import kotlinx.serialization.json.JsonElementKt;
+import kotlinx.serialization.json.JsonObject;
+import kotlin.Unit;
+import kotlin.jvm.functions.Function1;
 
 public class CreateSellerAccountActivity extends AppCompatActivity {
     private EditText firstNameEditText, lastNameEditText, shopNameEditText, /*shopLocationEditText,*/
             emailEditText, phoneEditText, passwordEditText, confirmPasswordEditText;
     private CheckBox termsCheckbox;
     private Button createAccountButton;
-    private FirebaseAuth mAuth;
-    private FirebaseFirestore db;
     private Spinner spinnerShopBarangay;
     private String selectedBarangay = "";
 
@@ -35,10 +35,6 @@ public class CreateSellerAccountActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_seller_account);
-
-        // Initialize Firebase
-        mAuth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance();
 
         // Initialize views
         initializeViews();
@@ -137,52 +133,37 @@ public class CreateSellerAccountActivity extends AppCompatActivity {
     }
 
     private void createSellerAccount() {
-        String email = emailEditText.getText().toString();
-        String password = passwordEditText.getText().toString();
+        String email = emailEditText.getText().toString().trim();
+        String password = passwordEditText.getText().toString().trim();
+        String firstName = firstNameEditText.getText().toString().trim();
+        String lastName = lastNameEditText.getText().toString().trim();
+        String shopName = shopNameEditText.getText().toString().trim();
+        String shopLocation = selectedBarangay;
 
-        mAuth.createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener(this, task -> {
-                    if (task.isSuccessful()) {
-                        FirebaseUser user = mAuth.getCurrentUser();
-                        if (user != null) {
-                            saveSellerToFirestore(user.getUid());
-                        }
-                    } else {
-                        Toast.makeText(CreateSellerAccountActivity.this,
-                                "Account creation failed: " + task.getException().getMessage(),
-                                Toast.LENGTH_SHORT).show();
-                    }
-                });
-    }
+        java.util.Map<String, String> metadata = new java.util.HashMap<>();
+        metadata.put("first_name", firstName);
+        metadata.put("last_name", lastName);
+        metadata.put("shop_name", shopName);
+        metadata.put("shop_location", shopLocation);
+        metadata.put("account_type", "seller");
 
-    private void saveSellerToFirestore(String userId) {
-        Map<String, Object> sellerData = new HashMap<>();
-        sellerData.put("firstName", firstNameEditText.getText().toString());
-        sellerData.put("lastName", lastNameEditText.getText().toString());
-        sellerData.put("shopName", shopNameEditText.getText().toString());
-        sellerData.put("shopLocation", selectedBarangay);
-        sellerData.put("email", emailEditText.getText().toString());
-        sellerData.put("phone", phoneEditText.getText().toString());
-        sellerData.put("accountType", "seller");
-        sellerData.put("verificationStatus", "pending");
-        sellerData.put("createdAt", System.currentTimeMillis());
-
-        db.collection("sellers").document(userId)
-                .set(sellerData)
-                .addOnSuccessListener(aVoid -> {
+        SupabaseManager.signUp(email, password, metadata, new SupabaseManager.SupabaseCallback() {
+            @Override
+            public void onResult(boolean success, String error) {
+                if (success) {
                     Toast.makeText(CreateSellerAccountActivity.this,
-                            "Seller account created successfully! Waiting for verification.",
+                            "Seller account created successfully! Please check your email for verification.",
                             Toast.LENGTH_LONG).show();
-                    // Sign out the user since they need to wait for verification
-                    mAuth.signOut();
+                    
                     // Return to login screen
                     startActivity(new Intent(CreateSellerAccountActivity.this, LoginActivity.class));
                     finish();
-                })
-                .addOnFailureListener(e -> {
+                } else {
                     Toast.makeText(CreateSellerAccountActivity.this,
-                            "Error saving seller data: " + e.getMessage(),
+                            "Account creation failed: " + error,
                             Toast.LENGTH_SHORT).show();
-                });
+                }
+            }
+        });
     }
 }

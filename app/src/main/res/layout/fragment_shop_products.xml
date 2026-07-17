@@ -71,18 +71,31 @@
 
             <!-- Shop Info Section -->
             <RelativeLayout
+                android:id="@+id/layoutShopHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:padding="16dp"
                 android:background="#22000000">
 
+                <ImageView
+                    android:id="@+id/imgShopBanner"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:scaleType="centerCrop"
+                    android:layout_alignTop="@id/imgShopLogo"
+                    android:layout_alignBottom="@id/imgShopLogo"
+                    android:visibility="gone" />
+
                 <com.google.android.material.imageview.ShapeableImageView
                     android:id="@+id/imgShopLogo"
                     android:layout_width="60dp"
                     android:layout_height="60dp"
-                    android:src="@drawable/placeholder_image"
+                    android:src="@drawable/ic_account"
+                    android:background="@color/black"
+                    android:padding="12dp"
                     android:scaleType="centerCrop"
                     app:shapeAppearanceOverlay="@style/CircleImageView"
+                    app:tint="@color/white"
                     android:layout_centerVertical="true" />
 
                 <LinearLayout

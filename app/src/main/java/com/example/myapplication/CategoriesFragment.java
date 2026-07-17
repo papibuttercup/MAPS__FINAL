@@ -30,7 +30,7 @@ public class CategoriesFragment extends Fragment {
             startActivity(intent);
         });
 
-        setupBanner(view.findViewById(R.id.bannerWoman), "Woman");
+        setupBanner(view.findViewById(R.id.bannerWoman), "Women");
         setupBanner(view.findViewById(R.id.bannerMen), "Men");
         setupBanner(view.findViewById(R.id.bannerKids), "Kids");
         setupBanner(view.findViewById(R.id.bannerHome), "Home");

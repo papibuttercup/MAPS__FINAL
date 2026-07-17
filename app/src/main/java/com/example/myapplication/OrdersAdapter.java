@@ -9,26 +9,24 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-import com.google.firebase.firestore.FirebaseFirestore;
 import java.text.SimpleDateFormat;
 import java.util.List;
-import java.util.Map;
 import java.util.Locale;
+import java.util.Date;
+import java.text.ParseException;
 
 public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder> {
-    private List<Order> orders;
-    private FirebaseFirestore db;
+    private List<SupabaseManager.Order> orders;
     private SimpleDateFormat dateFormat;
     private boolean isCustomerView;
 
     public interface OnOrderClickListener {
-        void onOrderClick(Order order);
+        void onOrderClick(SupabaseManager.Order order);
     }
     private OnOrderClickListener listener;
 
-    public OrdersAdapter(List<Order> orders, boolean isCustomerView) {
+    public OrdersAdapter(List<SupabaseManager.Order> orders, boolean isCustomerView) {
         this.orders = orders;
-        this.db = FirebaseFirestore.getInstance();
         this.dateFormat = new SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault());
         this.isCustomerView = isCustomerView;
     }
@@ -47,89 +45,43 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Order order = orders.get(position);
+        SupabaseManager.Order order = orders.get(position);
         
-        holder.orderId.setText("Order #" + (order.orderId != null ? order.orderId : ""));
-        String customerName = order.customerName != null && !order.customerName.isEmpty() ? order.customerName : "Unknown Customer";
-        String customerPhone = order.customerPhone != null && !order.customerPhone.isEmpty() ? order.customerPhone : "N/A";
+        holder.orderId.setText("Order #" + (order.getId() != null ? order.getId() : ""));
+        String customerName = order.getCustomer_name() != null && !order.getCustomer_name().isEmpty() ? order.getCustomer_name() : "Unknown Customer";
+        String customerPhone = order.getCustomer_phone() != null && !order.getCustomer_phone().isEmpty() ? order.getCustomer_phone() : "N/A";
         holder.customerInfo.setText(String.format("Customer: %s\nPhone: %s", customerName, customerPhone));
 
-        // If customer is unknown, try to fetch from Firestore users collection
-        if ("Unknown Customer".equals(customerName) && order.customerId != null) {
-            db.collection("users").document(order.customerId).get()
-                .addOnSuccessListener(doc -> {
-                    if (doc.exists()) {
-                        String firstName = doc.getString("firstName");
-                        String lastName = doc.getString("lastName");
-                        String fullName = "";
-                        if (firstName != null) fullName += firstName;
-                        if (lastName != null) fullName += (fullName.isEmpty() ? "" : " ") + lastName;
-                        
-                        String phone = doc.getString("phone");
-                        
-                        if (!fullName.trim().isEmpty()) {
-                            holder.customerInfo.setText(String.format("Customer: %s\nPhone: %s", 
-                                fullName.trim(), phone != null ? phone : "N/A"));
-                        }
-                    }
-                });
-        }
-        
-        // Format item details handling both top-level product and 'products' list (from cart)
+        // Format item details
         StringBuilder itemDetails = new StringBuilder();
         itemDetails.append("Items:\n");
         
-        if (order.products != null && !order.products.isEmpty()) {
-            // Multi-product order (from Cart)
-            for (Map<String, Object> productMap : order.products) {
-                String name = (String) productMap.get("name");
-                if (name == null) name = (String) productMap.get("productName");
-                if (name == null) name = "Unknown Product";
-                
-                Object qtyObj = productMap.get("quantity");
-                int qty = 1;
-                if (qtyObj instanceof Long) qty = ((Long) qtyObj).intValue();
-                else if (qtyObj instanceof Integer) qty = (Integer) qtyObj;
-                
-                String color = (String) productMap.get("color");
-                if (color == null) color = (String) productMap.get("selectedColor");
-                String size = (String) productMap.get("size");
-                if (size == null) size = (String) productMap.get("selectedSize");
-                
-                itemDetails.append(String.format("- %s (x%d)%s%s\n", 
-                    name, qty, 
-                    color != null ? ", " + color : "",
-                    size != null ? ", " + size : ""
-                ));
-            }
-        } else {
-            // Single-product order (from Maps or Buy Now)
-            itemDetails.append(String.format("- %s (x%d)%s%s\n", 
-                order.productName != null ? order.productName : "Unknown Product",
-                order.quantity > 0 ? order.quantity : 1,
-                order.selectedColor != null ? ", " + order.selectedColor : "",
-                order.selectedSize != null ? ", " + order.selectedSize : ""
-            ));
-        }
+        // SupabaseManager.Order doesn't have products list in the current Serializable data class, 
+        // but it has total_amount. We might need to fetch order items separately.
+        // For now, we'll just show the delivery address.
         
-        String address = order.deliveryAddress != null && !order.deliveryAddress.isEmpty() ? order.deliveryAddress : "No address provided";
+        String address = order.getDelivery_address() != null && !order.getDelivery_address().isEmpty() ? order.getDelivery_address() : "No address provided";
         itemDetails.append(String.format("Delivery: %s", address));
 
         holder.orderDetails.setText(itemDetails.toString().trim());
             
-        double finalAmount = order.totalAmount;
-        if (finalAmount == 0) {
-            // Fallback for older data
-            if (order.totalPrice > 0) {
-                finalAmount = order.totalPrice;
-            } else if (order.price > 0) {
-                finalAmount = order.price * (order.quantity > 0 ? order.quantity : 1);
+        double finalAmount = order.getTotal_amount();
+        holder.totalPrice.setText(String.format("Total: ₱%.2f", finalAmount));
+        
+        String dateStr = "Unknown";
+        if (order.getCreated_at() != null) {
+            try {
+                SimpleDateFormat isoSdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault());
+                Date date = isoSdf.parse(order.getCreated_at());
+                dateStr = dateFormat.format(date);
+            } catch (ParseException e) {
+                dateStr = order.getCreated_at();
             }
         }
-        holder.totalPrice.setText(String.format("Total: ₱%.2f", finalAmount));
+
         holder.orderStatus.setText(String.format("Status: %s\nDate: %s", 
-            getFriendlyStatus(order.status),
-            order.timestamp != null ? dateFormat.format(order.timestamp.toDate()) : "Unknown"));
+            getFriendlyStatus(order.getStatus()),
+            dateStr));
 
         // Show/hide buttons based on view type and order status
         holder.btnAccept.setVisibility(View.GONE);
@@ -137,15 +89,14 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
         holder.btnComplete.setVisibility(View.GONE);
         holder.btnCancel.setVisibility(View.GONE);
 
+        String status = order.getStatus();
         if (isCustomerView) {
-            // For customer view, only show cancel button for pending orders
-            if (order.status != null && order.status.equalsIgnoreCase("pending")) {
+            if (status != null && status.equalsIgnoreCase("pending")) {
                 holder.btnCancel.setVisibility(View.VISIBLE);
             }
         } else {
-            // For seller view, show accept/reject for pending orders
-            if (order.status != null) {
-                switch (order.status.toLowerCase()) {
+            if (status != null) {
+                switch (status.toLowerCase()) {
                     case "pending":
                         holder.btnAccept.setVisibility(View.VISIBLE);
                         holder.btnReject.setVisibility(View.VISIBLE);
@@ -159,14 +110,14 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
         }
 
         // Set up button click listeners
-        if (order.orderId != null) {
+        if (order.getId() != null) {
             if (isCustomerView) {
                 holder.btnCancel.setOnClickListener(v -> {
                     new AlertDialog.Builder(v.getContext())
                         .setTitle("Cancel Order")
                         .setMessage("Are you sure you want to cancel this order?")
                         .setPositiveButton("Yes", (dialog, which) -> {
-                            updateOrderStatus(order.orderId, "canceled", v.getContext(), () -> {
+                            updateOrderStatus(order.getId(), "canceled", v.getContext(), () -> {
                                 int pos = holder.getAdapterPosition();
                                 if (pos != RecyclerView.NO_POSITION) {
                                     orders.remove(pos);
@@ -179,7 +130,7 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
                 });
             } else {
                 holder.btnAccept.setOnClickListener(v -> {
-                    updateOrderStatus(order.orderId, "accepted", holder.itemView.getContext(), () -> {
+                    updateOrderStatus(order.getId(), "accepted", holder.itemView.getContext(), () -> {
                         int pos = holder.getAdapterPosition();
                         if (pos != RecyclerView.NO_POSITION) {
                             orders.remove(pos);
@@ -187,8 +138,8 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
                         }
                     });
                 });
-                holder.btnReject.setOnClickListener(v -> updateOrderStatus(order.orderId, "rejected", holder.itemView.getContext(), null));
-                holder.btnComplete.setOnClickListener(v -> updateOrderStatus(order.orderId, "completed", holder.itemView.getContext(), null));
+                holder.btnReject.setOnClickListener(v -> updateOrderStatus(order.getId(), "rejected", holder.itemView.getContext(), null));
+                holder.btnComplete.setOnClickListener(v -> updateOrderStatus(order.getId(), "completed", holder.itemView.getContext(), null));
             }
         }
 
@@ -198,18 +149,20 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
     }
 
     private void updateOrderStatus(String orderId, String newStatus, android.content.Context context, Runnable onSuccess) {
-        db.collection("orders").document(orderId)
-            .update("status", newStatus)
-            .addOnSuccessListener(aVoid -> {
-                Toast.makeText(context, 
-                    "Order status updated to " + newStatus, Toast.LENGTH_SHORT).show();
-                if (onSuccess != null) onSuccess.run();
-            })
-            .addOnFailureListener(e -> {
-                Toast.makeText(context,
-                    "Failed to update order status: " + e.getMessage(), 
-                    Toast.LENGTH_SHORT).show();
-            });
+        java.util.Map<String, Object> updates = new java.util.HashMap<>();
+        updates.put("status", newStatus);
+        
+        SupabaseManager.updateOrder(orderId, updates, new SupabaseManager.SupabaseCallback() {
+            @Override
+            public void onResult(boolean success, String error) {
+                if (success) {
+                    Toast.makeText(context, "Order updated to " + newStatus, Toast.LENGTH_SHORT).show();
+                    if (onSuccess != null) onSuccess.run();
+                } else {
+                    Toast.makeText(context, "Failed to update order: " + error, Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
 
     private String getFriendlyStatus(String status) {
@@ -246,4 +199,4 @@ public class OrdersAdapter extends RecyclerView.Adapter<OrdersAdapter.ViewHolder
             btnCancel = itemView.findViewById(R.id.btnCancel);
         }
     }
-} 
+}

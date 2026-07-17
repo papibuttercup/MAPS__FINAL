@@ -5,22 +5,16 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
+import io.github.jan.supabase.auth.user.UserInfo;
 
 public class AccountSecurityActivity extends AppCompatActivity {
-    private FirebaseAuth auth;
-    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_account_security);
-
-        auth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance();
 
         ImageButton backButton = findViewById(R.id.backButton);
         backButton.setOnClickListener(v -> finish());
@@ -33,7 +27,7 @@ public class AccountSecurityActivity extends AppCompatActivity {
         setupDetailItem(R.id.itemMyProfile, "My Profile", "", v -> {
             startActivity(new Intent(this, EditProfileActivity.class));
         });
-        setupDetailItem(R.id.itemUsername, "Username", "akishiki", null);
+        setupDetailItem(R.id.itemUsername, "Username", "user", null);
         setupDetailItem(R.id.itemPhone, "Phone", "*****31", null);
         setupDetailItem(R.id.itemEmail, "Email", "h***********2@gmail.com", null);
         setupDetailItem(R.id.itemSocialMedia, "Social Media Accounts", "", null);
@@ -72,21 +66,28 @@ public class AccountSecurityActivity extends AppCompatActivity {
     }
 
     private void loadUserData() {
-        FirebaseUser currentUser = auth.getCurrentUser();
-        if (currentUser != null) {
-            db.collection("users").document(currentUser.getUid())
-                .get()
-                .addOnSuccessListener(doc -> {
-                    if (doc.exists()) {
-                        String username = doc.getString("username");
-                        String phone = doc.getString("phone");
-                        String email = currentUser.getEmail();
+        var session = SupabaseManager.getCurrentSession();
+        if (session != null) {
+            UserInfo user = session.getUser();
+            String email = user.getEmail();
+            String userId = user.getId();
 
-                        if (username != null) updateDetailValue(R.id.itemUsername, username);
-                        if (phone != null) updateDetailValue(R.id.itemPhone, maskPhone(phone));
-                        if (email != null) updateDetailValue(R.id.itemEmail, maskEmail(email));
+            if (email != null) updateDetailValue(R.id.itemEmail, maskEmail(email));
+
+            // Fetch profile data from Supabase using helper
+            SupabaseManager.getUserProfile(userId, new SupabaseManager.SupabaseCallbackWithProfile() {
+                @Override
+                public void onResult(boolean success, SupabaseManager.Profile profile, String error) {
+                    if (success && profile != null) {
+                        String firstName = profile.getFirst_name();
+                        String lastName = profile.getLast_name();
+                        String fullName = (firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "");
+                        if (!fullName.trim().isEmpty()) updateDetailValue(R.id.itemUsername, fullName.trim());
+                    } else if (error != null) {
+                        Toast.makeText(AccountSecurityActivity.this, "Error loading profile: " + error, Toast.LENGTH_SHORT).show();
                     }
-                });
+                }
+            });
         }
     }
 
@@ -96,13 +97,6 @@ public class AccountSecurityActivity extends AppCompatActivity {
             TextView valueView = view.findViewById(R.id.itemValue);
             if (valueView != null) valueView.setText(value);
         }
-    }
-
-    private String maskPhone(String phone) {
-        if (phone.length() > 2) {
-            return "*******" + phone.substring(phone.length() - 2);
-        }
-        return phone;
     }
 
     private String maskEmail(String email) {
